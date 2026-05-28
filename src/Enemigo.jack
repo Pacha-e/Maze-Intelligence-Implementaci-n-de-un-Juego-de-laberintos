@@ -17,6 +17,7 @@ class Enemigo {
     field int fila, col;
     field int filaAnt, colAnt;
     field int capacidad;
+    field int variante;  // 1 = centinela comun, 2 = cazador (cuerno)
     
     // Estructuras de la heuristica Manhattan con conciencia de muros
     field Array colaF, colaC;       // Frontera de exploracion (Filas y Columnas)
@@ -34,8 +35,11 @@ class Enemigo {
         
         let fila = 0; let col = 0;
         let filaAnt = 0; let colAnt = 0;
+        let variante = 1;
         return this;
     }
+
+    method void setVariante(int v) { let variante = v; return; }
 
     method void fijar(int f, int c) {
         let fila = f; let col = c;
@@ -211,13 +215,50 @@ class Enemigo {
     method void retroceder() { let fila = filaAnt; let col = colAnt; return; }
     method boolean estaEn(int f, int c) { return (fila = f) & (col = c); }
 
+    /** Sprite del enemigo (12x14 dentro de celda 16x16):
+     *  Centinela-fantasma estilo arcade clasico.
+     *  - Domo redondeado superior (drawCircle).
+     *  - Cuerpo rectangular.
+     *  - Borde inferior con ondas (drawLine) para evocar el "halo" tipico
+     *    de los fantasmas de Pac-Man.
+     *  - Dos ojos blancos con pupila negra.
+     *  - Variante 2 (modo Experto): cuerno superior, ojos rasgados.
+     */
     method void dibujar(Laberinto lab) {
-        var int x, y;
+        var int x, y, cx;
         let x = lab.celdaX(col); let y = lab.celdaY(fila);
+
+        // Cuerpo: rectangulo principal (cabeza + torso)
         do Screen.setColor(true);
-        do Screen.drawRectangle(x + 2, y + 2, x + 11, y + 11);
+        do Screen.drawRectangle(x + 2, y + 4, x + 13, y + 12);
+        // Domo superior (semicirculo) — drawCircle completo, el inferior queda detras
+        let cx = x + 7;
+        do Screen.drawCircle(cx, y + 5, 4);
+
+        // Ondas inferiores (3 pequenos triangulos blancos para simular el halo)
         do Screen.setColor(false);
-        do Screen.drawRectangle(x + 5, y + 5, x + 8, y + 8);
+        do Screen.drawLine(x + 3, y + 12, x + 4, y + 13);
+        do Screen.drawLine(x + 4, y + 13, x + 5, y + 12);
+        do Screen.drawLine(x + 6, y + 12, x + 7, y + 13);
+        do Screen.drawLine(x + 7, y + 13, x + 8, y + 12);
+        do Screen.drawLine(x + 9, y + 12, x + 10, y + 13);
+        do Screen.drawLine(x + 10, y + 13, x + 11, y + 12);
+
+        // Ojos: blanco (fondo) con pupila negra
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x + 4, y + 6, x + 6, y + 8);
+        do Screen.drawRectangle(x + 9, y + 6, x + 11, y + 8);
+        do Screen.setColor(true);
+        if (variante = 2) {
+            // Variante "cazador": pupilas rasgadas + cuerno superior
+            do Screen.drawRectangle(x + 5, y + 6, x + 5, y + 8);
+            do Screen.drawRectangle(x + 10, y + 6, x + 10, y + 8);
+            do Screen.drawLine(x + 7, y, x + 7, y + 2);  // cuerno
+        } else {
+            // Variante "centinela": pupilas cuadradas centradas
+            do Screen.drawRectangle(x + 5, y + 7, x + 6, y + 8);
+            do Screen.drawRectangle(x + 9, y + 7, x + 10, y + 8);
+        }
         return;
     }
 

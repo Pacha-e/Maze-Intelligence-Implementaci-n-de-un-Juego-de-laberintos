@@ -8,8 +8,8 @@ class MenuPrincipal {
 
     constructor MenuPrincipal new() {
         let seleccion = 2;
-        let txtTitulo = "LABERINTO";
-        let txtMision = "RECOLECTA LAS GALLETAS Y ESCAPA";
+        let txtTitulo = "MAZE INTELLIGENCE";
+        let txtMision = "ROBA LOS CRISTALES Y ESCAPA DEL CENTINELA";
         let txtSalir = "PRESIONA Q PARA SALIR";
         let txtSelPrefijo = ">>> [ ";
         let txtNoSelPrefijo = "    [ ";
@@ -103,12 +103,12 @@ class MenuPrincipal {
         do Screen.setColor(false);
         do Screen.drawRectangle(151, 46, 361, 94);  // Area blanca final
         
-        // Titulo LABERINTO (Fila 6)
-        do Output.moveCursor(6, 27);
+        // Titulo MAZE INTELLIGENCE (Fila 6, 17 chars centrados en caja)
+        do Output.moveCursor(6, 23);
         do Output.printString(txtTitulo);
 
-        // 3. Instruccion de mision (Fila 11)
-        do Output.moveCursor(11, 16);
+        // 3. Instruccion de mision (Fila 11, 41 chars centrados)
+        do Output.moveCursor(11, 11);
         do Output.printString(txtMision);
 
         // 4. Caja inferior para la salida (Borde uniforme de 3 pixeles)
@@ -121,13 +121,43 @@ class MenuPrincipal {
         do Output.moveCursor(20, 21);
         do Output.printString(txtSalir);
 
-        // Decoracion en esquinas (dentro del marco interno 17,17 a 494,238)
-        do Screen.setColor(true);
-        do Screen.drawRectangle(20, 20, 30, 30);
-        do Screen.drawRectangle(481, 20, 491, 30);
-        do Screen.drawRectangle(20, 225, 30, 235);
-        do Screen.drawRectangle(481, 225, 491, 235);
+        // Sprites decorativos en las cuatro esquinas: dos jugadores y
+        // dos enemigos, intercalados, anuncian la mecanica del juego de
+        // un vistazo. Identidad del tema "Cripta del Centinela".
+        do dibujarJugadorMini(28, 25);
+        do dibujarEnemigoMini(472, 25);
+        do dibujarEnemigoMini(28, 215);
+        do dibujarJugadorMini(472, 215);
 
+        return;
+    }
+
+    /** Mini-jugador 12x12 para decoracion (sin animacion). */
+    method void dibujarJugadorMini(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y, x + 11, y + 11);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x + 2, y + 2, x + 9, y + 9);
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x + 3, y + 3, x + 4, y + 5);
+        do Screen.drawRectangle(x + 7, y + 3, x + 8, y + 5);
+        do Screen.drawLine(x + 4, y + 8, x + 7, y + 8);
+        return;
+    }
+
+    /** Mini-enemigo 12x12 para decoracion. */
+    method void dibujarEnemigoMini(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y + 2, x + 11, y + 10);
+        do Screen.drawCircle(x + 5, y + 3, 4);
+        // Ojos blancos
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x + 2, y + 4, x + 4, y + 6);
+        do Screen.drawRectangle(x + 7, y + 4, x + 9, y + 6);
+        // Ondas inferiores
+        do Screen.drawRectangle(x, y + 10, x + 2, y + 11);
+        do Screen.drawRectangle(x + 4, y + 10, x + 6, y + 11);
+        do Screen.drawRectangle(x + 8, y + 10, x + 11, y + 11);
         return;
     }
 

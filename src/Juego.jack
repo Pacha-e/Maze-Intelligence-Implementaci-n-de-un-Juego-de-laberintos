@@ -43,6 +43,7 @@ class Juego {
         let jugador = Jugador.new();
         let enemigo = Enemigo.new(403);
         let enemigo2 = Enemigo.new(403); // Segundo enemigo persistente
+        do enemigo2.setVariante(2);      // Cazador (cuerno) para diferenciarlo del centinela
         let estado = 0;
         let nivel = 1;
         let puntaje = 0;
@@ -236,18 +237,46 @@ class Juego {
     }
 
     method void dibujarPanel() {
+        var int i, hx;
+        // Limpia franja de texto
         do Output.moveCursor(0, 0);
         do Output.printString(pnlClear);
+        // Texto: nivel y puntaje
         do Output.moveCursor(0, 0);
-        do Output.printString(pnlVidas); do Output.printInt(vidas);
         do Output.printString(pnlNivel); do Output.printInt(nivel);
         do Output.printString(pnlPuntos); do Output.printInt(puntaje);
+        // Limpia franja grafica de vidas (parte superior derecha)
+        do Screen.setColor(false);
+        do Screen.drawRectangle(380, 4, 510, 18);
+        // Iconos de vida: corazones pixel-art a la derecha del HUD
+        let i = 0;
+        while (i < vidas) {
+            let hx = 384 + (i * 14);
+            do dibujarCorazon(hx, 6);
+            let i = i + 1;
+        }
+        return;
+    }
+
+    /** Corazon pixel-art 9x8 px (vidas en el HUD). */
+    method void dibujarCorazon(int x, int y) {
+        do Screen.setColor(true);
+        // Dos jorobas
+        do Screen.drawRectangle(x + 1, y, x + 3, y + 1);
+        do Screen.drawRectangle(x + 5, y, x + 7, y + 1);
+        // Cuerpo
+        do Screen.drawRectangle(x, y + 1, x + 8, y + 4);
+        // Triangulo inferior
+        do Screen.drawRectangle(x + 1, y + 5, x + 7, y + 5);
+        do Screen.drawRectangle(x + 2, y + 6, x + 6, y + 6);
+        do Screen.drawRectangle(x + 3, y + 7, x + 5, y + 7);
+        do Screen.drawPixel(x + 4, y + 8);
         return;
     }
 
     method void mostrarVictoria() {
         do Screen.clearScreen();
-        // Marco doble exterior (estilo trofeo): rectangulos concentricos.
+        // Marco doble concentrico (estilo trofeo)
         do Screen.setColor(true);
         do Screen.drawRectangle(60, 60, 451, 200);
         do Screen.setColor(false);
@@ -256,6 +285,8 @@ class Juego {
         do Screen.drawRectangle(70, 70, 441, 190);
         do Screen.setColor(false);
         do Screen.drawRectangle(73, 73, 438, 187);
+        // Corona gigante centrada (sprite ASCII pixel-art via rectangulos)
+        do dibujarCoronaGrande(220, 90);
         do Output.moveCursor(10, 25);
         do Output.printString(txtVictoria);
         do Output.moveCursor(12, 22);
@@ -269,11 +300,13 @@ class Juego {
 
     method void mostrarDerrota() {
         do Screen.clearScreen();
-        // Marco unico solido (estilo lapida): un solo bloque grueso oscuro.
+        // Marco lapida: bloque solido grueso
         do Screen.setColor(true);
         do Screen.drawRectangle(60, 60, 451, 200);
         do Screen.setColor(false);
         do Screen.drawRectangle(80, 80, 431, 180);
+        // Sprite gigante del enemigo centinela (te atrapo)
+        do dibujarEnemigoGrande(220, 95);
         do Output.moveCursor(10, 25);
         do Output.printString(txtDerrota);
         do Output.moveCursor(12, 22);
@@ -282,6 +315,46 @@ class Juego {
         do Output.printString(txtPromptMenu);
         do esperarTecla();
         let estado = 0;
+        return;
+    }
+
+    /** Corona pixel-art 60x30 px (pantalla de victoria). */
+    method void dibujarCoronaGrande(int x, int y) {
+        do Screen.setColor(true);
+        // Base
+        do Screen.drawRectangle(x, y + 20, x + 60, y + 28);
+        // Tres picos triangulares
+        do Screen.drawRectangle(x + 4, y + 12, x + 14, y + 20);
+        do Screen.drawRectangle(x + 25, y + 8, x + 35, y + 20);
+        do Screen.drawRectangle(x + 46, y + 12, x + 56, y + 20);
+        // Joyas (cuadritos blancos sobre cada pico)
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x + 7, y + 14, x + 11, y + 18);
+        do Screen.drawRectangle(x + 28, y + 10, x + 32, y + 14);
+        do Screen.drawRectangle(x + 49, y + 14, x + 53, y + 18);
+        return;
+    }
+
+    /** Sprite gigante del enemigo (50x60 px) para la pantalla de derrota. */
+    method void dibujarEnemigoGrande(int x, int y) {
+        // Domo + cuerpo
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y + 15, x + 50, y + 60);
+        do Screen.drawCircle(x + 25, y + 15, 25);
+        // Ondas inferiores (recortes blancos)
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x, y + 55, x + 8, y + 60);
+        do Screen.drawRectangle(x + 12, y + 55, x + 19, y + 60);
+        do Screen.drawRectangle(x + 23, y + 55, x + 30, y + 60);
+        do Screen.drawRectangle(x + 34, y + 55, x + 41, y + 60);
+        do Screen.drawRectangle(x + 45, y + 55, x + 50, y + 60);
+        // Ojos grandes blancos
+        do Screen.drawRectangle(x + 8, y + 20, x + 20, y + 35);
+        do Screen.drawRectangle(x + 30, y + 20, x + 42, y + 35);
+        // Pupilas negras (rasgadas)
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x + 12, y + 22, x + 16, y + 32);
+        do Screen.drawRectangle(x + 34, y + 22, x + 38, y + 32);
         return;
     }
 

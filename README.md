@@ -1,6 +1,6 @@
 # Maze Intelligence
 
-Juego de laberintos desarrollado en Jack para Nand2Tetris. El jugador debe recolectar todas las galletas de cada nivel mientras uno o dos enemigos controlados por una IA con **heuristica Manhattan y conciencia de muros** lo persiguen por los caminos validos del mapa.
+**Cripta del Centinela** — Juego de laberintos desarrollado en Jack para Nand2Tetris. Encarnas a un arqueologo-digital que se infiltra en una cripta-circuito para robar los cristales de datos. Uno o dos centinelas-fantasma, guiados por una IA con **heuristica Manhattan y conciencia de muros**, te persiguen por los caminos validos del mapa. Estetica arcade-retro 1-bit, inspirada en Pac-Man y los clasicos monocromaticos del ZX Spectrum y el Game Boy.
 
 ## Controles
 
@@ -57,6 +57,33 @@ El proyecto usa solo las clases estandar del sistema Jack: `Screen`, `Keyboard`,
 - `Jugador.jack`: posicion del heroe y movimiento validado contra el laberinto.
 - `Enemigo.jack`: IA con heuristica Manhattan y conciencia de muros. En cada paso elige de su frontera la celda con menor distancia Manhattan al jugador y solo expande vecinos transitables (filtrados por `Laberinto.puedeEntrar`). Incluye un respaldo voraz que da un paso adaptativo cuando la heuristica no alcanza al jugador en 150 expansiones. En modo Experto, el segundo enemigo recibe la posicion del primero y la marca como visitada para no fusionarse.
 - `Objetivo.jack`: representa una galleta (par fila/columna), reutilizable via el pool de `Laberinto`.
+
+## Identidad visual
+
+El juego usa exclusivamente las primitivas graficas del JackOS (`drawRectangle`, `drawLine`, `drawCircle`, `drawPixel`) sobre la pantalla monocromatica 512x256 del Hack. La identidad visual se construye con sprites compuestos pixel-art:
+
+| Elemento | Forma | Tamano | Identidad |
+|---|---|---|---|
+| Jugador | Cabeza con ojos cuadrados y sonrisa | 12x12 px | Curiosidad, agilidad — el arqueologo |
+| Centinela (modo 1, 2 y 3) | Domo redondeado + ondas inferiores + ojos | 12x14 px | Patrullero clasico estilo Pac-Man ghost |
+| Cazador (modo Experto, 2do enemigo) | Centinela + cuerno superior + pupilas rasgadas | 12x16 px | Especialista, diferenciado del centinela comun |
+| Cristal (objetivo) | Rombo de 4 puntas con centro lleno | 10x10 px | Reliquia valiosa, lectura inmediata |
+| Muro | Bloque solido 14x14 con cruz interna blanca | 14x14 px | Bloque-circuito, textura sin perder legibilidad |
+| Corazon (vida) | Pixel-art clasico de dos jorobas + triangulo | 9x9 px | Indicador universal en el HUD |
+| Corona (victoria) | Tres picos con joyas blancas | 60x30 px | Trofeo grande en la pantalla final |
+
+### Pantallas
+
+- **Menu principal**: marco triple con caja de titulo, mision, opciones con corchetes `>>> [ N ] MODO <<<` y sprites de jugador/enemigo en las cuatro esquinas.
+- **Partida**: HUD superior con nivel + puntaje a la izquierda y corazones de vida a la derecha; grid de muros, cristales, jugador y centinela(s).
+- **Victoria**: marco doble concentrico (efecto trofeo) + corona gigante + puntaje final.
+- **Derrota**: marco solido (efecto lapida) + sprite gigante del centinela cazandote + puntaje final.
+
+### Referencias de diseno
+
+- [The Art of 1 Bit Game Development](https://bandurart.com/the-art-of-1-bit-game-development/) — guias de composicion 1-bit y uso de patrones.
+- [Pac-Man Ghost Gang](https://pixeljoint.com/pixelart/84514.htm) — anatomia de sprites tipo fantasma y diferenciacion por detalles.
+- [Sprite techniques en Jack/Nand2Tetris](https://github.com/encse/nand2tetris/blob/master/pong/Screen.jack) — primitivas Screen y patrones erase-then-redraw.
 
 ## Decisiones tecnicas clave
 

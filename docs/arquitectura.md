@@ -81,6 +81,25 @@ Tecla -> Juego.manejarCicloJuego
 - Limite practico: hasta 31 columnas (`10 + 30*16 + 13 = 503 < 511`) y hasta 13 filas (`42 + 12*16 + 13 = 247 < 255`).
 - Niveles: se usan configuraciones de `11x27`, `13x29` y `13x31` para maximizar la inmersion visual en la pantalla de la VM de Nand2Tetris. El pool fisico siempre es 13x31 = 403 celdas.
 
+## Identidad visual (tema "Cripta del Centinela")
+
+El juego se construye exclusivamente con las primitivas del JackOS sobre la pantalla 1-bit del Hack. La identidad visual se logra con sprites compuestos:
+
+- **Jugador** (`Jugador.dibujar`): cara de 12x12 con dos ojos cuadrados y sonrisa central. Identidad: arqueologo agil y curioso.
+- **Enemigo centinela** (`Enemigo.dibujar`, variante 1): domo redondeado superior (`drawCircle`) + cuerpo rectangular + ondas inferiores (lineas blancas que recortan el cuerpo) + dos ojos cuadrados con pupila centrada. Inspirado en los fantasmas clasicos de Pac-Man.
+- **Enemigo cazador** (`Enemigo.dibujar`, variante 2 — solo en modo Experto): igual al centinela pero con cuerno superior (`drawLine`) y pupilas rasgadas (rectangulos verticales). Permite distinguirlo del primero de un vistazo.
+- **Cristal/objetivo** (`Laberinto.dibujar`): rombo de 4 puntas con centro lleno, mucho mas legible y "valioso" que el cuadradito plano.
+- **Muro** (`Laberinto.dibujar`): bloque solido 14x14 con una cruz interna blanca que evoca un circuito impreso. La cruz da textura sin sacrificar legibilidad.
+- **Corazon de vida** (`Juego.dibujarCorazon`): pixel-art clasico de dos jorobas + triangulo descendente, 9x9 px, ubicado en la franja del HUD.
+- **Corona** (`Juego.dibujarCoronaGrande`): tres picos con joyas blancas, 60x30 px, pantalla de victoria.
+- **Sprite gigante del enemigo** (`Juego.dibujarEnemigoGrande`): 50x60 px, pantalla de derrota; conserva la anatomia del centinela en escala.
+
+Decisiones de composicion:
+
+- Las primitivas elegidas son siempre las mas baratas posibles (`drawRectangle` y `drawLine`) para preservar fluidez en la VM. `drawCircle` se usa solo donde aporta caracter (domo del enemigo, sprite grande).
+- El contraste se obtiene por reglas 1-bit: cada figura se dibuja en negro y se recortan los detalles internos en blanco con `setColor(false)`. Asi se simulan "huecos" sin tener acceso a un canal alfa.
+- Los sprites del menu (mini-jugador y mini-enemigo en las esquinas) reusan la misma anatomia que los sprites de juego para reforzar la identidad: lo que ves en el menu es lo que vas a ver en partida.
+
 ## Codigos de tecla (Keyboard.keyPressed)
 
 | Codigo | Tecla | Uso |

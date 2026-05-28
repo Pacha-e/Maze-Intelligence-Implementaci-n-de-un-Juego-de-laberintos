@@ -149,6 +149,13 @@ class Laberinto {
         return ~(celdas[(f * colsMax) + c] = 1);
     }
 
+    /** Renderiza el laberinto, los muros y los objetivos.
+     *  - Muros: bloque solido 14x14 con una cruz interna blanca que evoca
+     *    un circuito impreso (tema "cripta digital"). La cruz da textura
+     *    sin sacrificar legibilidad: el muro sigue leyendose como muro.
+     *  - Galletas (cristales): rombo de 4 puntas con centro lleno.
+     *    Mucho mas legible y "valioso" que el cuadradito plano original.
+     */
     method void dibujar() {
         var int f, c, x, y, i;
         var Objetivo obj;
@@ -157,8 +164,13 @@ class Laberinto {
             let c = 0; let x = 10;
             while (c < cols) {
                 if (celdas[(f * colsMax) + c] = 1) {
+                    // Bloque base
                     do Screen.setColor(true);
                     do Screen.drawRectangle(x, y, x + 13, y + 13);
+                    // Cruz interna blanca (textura tipo circuito)
+                    do Screen.setColor(false);
+                    do Screen.drawLine(x + 6, y + 2, x + 6, y + 11);
+                    do Screen.drawLine(x + 2, y + 6, x + 11, y + 6);
                 }
                 let c = c + 1; let x = x + 16;
             }
@@ -169,8 +181,17 @@ class Laberinto {
             let obj = objetivos[i];
             let x = celdaX(obj.getCol());
             let y = celdaY(obj.getFila());
+            // Cristal romboide: 4 puntas + centro
             do Screen.setColor(true);
-            do Screen.drawRectangle(x + 4, y + 4, x + 9, y + 9);
+            do Screen.drawPixel(x + 6, y + 3);   // punta arriba
+            do Screen.drawPixel(x + 6, y + 9);   // punta abajo
+            do Screen.drawPixel(x + 3, y + 6);   // punta izquierda
+            do Screen.drawPixel(x + 9, y + 6);   // punta derecha
+            do Screen.drawLine(x + 5, y + 4, x + 7, y + 4);
+            do Screen.drawLine(x + 4, y + 5, x + 8, y + 5);
+            do Screen.drawLine(x + 4, y + 6, x + 8, y + 6);
+            do Screen.drawLine(x + 4, y + 7, x + 8, y + 7);
+            do Screen.drawLine(x + 5, y + 8, x + 7, y + 8);
             let i = i + 1;
         }
         return;
