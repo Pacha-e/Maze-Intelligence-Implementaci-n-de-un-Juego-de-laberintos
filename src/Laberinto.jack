@@ -109,9 +109,14 @@ class Laberinto {
         return;
     }
 
-    /** Reposiciona un Objetivo del pool sin alocar. */
+    /** Reposiciona un Objetivo del pool sin alocar.
+     *  Guarda defensiva: descarta silenciosamente posiciones invalidas
+     *  (muro o fuera del grid) para que un mapa mal definido nunca
+     *  produzca una galleta inalcanzable que congele el nivel.
+     */
     method void setObjetivo(int f, int c) {
         var Objetivo obj;
+        if (~puedeEntrar(f, c)) { return; }
         if (conteoObjetivos < capacidadObjetivos) {
             let obj = objetivos[conteoObjetivos];
             do obj.fijar(f, c);
@@ -184,9 +189,25 @@ class Laberinto {
     method int getFilaObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getFila(); }
     method int getColObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getCol(); }
     method int getIndice(int f, int c) { return (f * colsMax) + c; }
-    method void setInicio(int f, int c) { let filaInicio = f; let colInicio = c; return; }
-    method void setEnemigoInicio(int f, int c) { let filaEnemigoInicio = f; let colEnemigoInicio = c; return; }
-    method void setEnemigo2Inicio(int f, int c) { let filaEnemigo2Inicio = f; let colEnemigo2Inicio = c; return; }
+    /** Setters de posiciones iniciales con guarda defensiva:
+     *  si la coordenada cae en muro o fuera del grid, se descarta para
+     *  evitar que el jugador o el enemigo arranquen en una celda ilegal.
+     */
+    method void setInicio(int f, int c) {
+        if (~puedeEntrar(f, c)) { return; }
+        let filaInicio = f; let colInicio = c;
+        return;
+    }
+    method void setEnemigoInicio(int f, int c) {
+        if (~puedeEntrar(f, c)) { return; }
+        let filaEnemigoInicio = f; let colEnemigoInicio = c;
+        return;
+    }
+    method void setEnemigo2Inicio(int f, int c) {
+        if (~puedeEntrar(f, c)) { return; }
+        let filaEnemigo2Inicio = f; let colEnemigo2Inicio = c;
+        return;
+    }
 
     method void eliminar() {
         var int i;

@@ -55,7 +55,7 @@ El proyecto usa solo las clases estandar del sistema Jack: `Screen`, `Keyboard`,
 - `GestorNiveles.jack`: fabrica de mapas. Construye los 9 layouts (3 modos x 3 niveles) con muros, inicios y galletas.
 - `Laberinto.jack`: matriz del mapa. Centraliza muros, validacion de movimientos (`puedeEntrar`), almacenamiento de galletas y renderizado del grid. Pre-aloca un pool de `Objetivo` para evitar fragmentacion del heap.
 - `Jugador.jack`: posicion del heroe y movimiento validado contra el laberinto.
-- `Enemigo.jack`: IA con heuristica Manhattan y conciencia de muros. En cada paso elige de su frontera la celda con menor distancia Manhattan al jugador y solo expande vecinos transitables (filtrados por `Laberinto.puedeEntrar`). En modo Experto, el segundo enemigo recibe la posicion del primero y la marca como visitada para no fusionarse.
+- `Enemigo.jack`: IA con heuristica Manhattan y conciencia de muros. En cada paso elige de su frontera la celda con menor distancia Manhattan al jugador y solo expande vecinos transitables (filtrados por `Laberinto.puedeEntrar`). Incluye un respaldo voraz que da un paso adaptativo cuando la heuristica no alcanza al jugador en 150 expansiones. En modo Experto, el segundo enemigo recibe la posicion del primero y la marca como visitada para no fusionarse.
 - `Objetivo.jack`: representa una galleta (par fila/columna), reutilizable via el pool de `Laberinto`.
 
 ## Decisiones tecnicas clave
@@ -63,7 +63,7 @@ El proyecto usa solo las clases estandar del sistema Jack: `Screen`, `Keyboard`,
 - **Pre-alocacion total**: `Juego` instancia `Laberinto`, `Jugador` y los dos `Enemigo` una sola vez al arrancar, con la capacidad maxima (13x31 = 403 celdas). Los cambios de nivel y reinicios tras perder vida solo reposicionan los objetos via `fijar()`, sin llamar a `Memory.alloc` / `Memory.deAlloc`. Esto evita el desbordamiento del heap del JackOS reportado al cambiar de modo varias veces.
 - **Pool de objetivos**: `Laberinto` reserva un arreglo de 30 `Objetivo` al construirse. `setObjetivo` reposiciona un slot libre del pool; `removerObjetivo` aplica swap-with-last para mantener el arreglo compacto sin huecos.
 - **Movimiento por turnos**: cada movimiento valido del jugador dispara la actualizacion de la IA y un redibujado del estado. Esto evita problemas de temporizacion y mantiene el comportamiento determinista.
-- **Validacion centralizada**: toda posicion candidata pasa por `Laberinto.puedeEntrar(f, c)` (bordes + muros), tanto para el jugador como para la IA.
+- **Validacion centralizada y defensiva**: toda posicion candidata pasa por `Laberinto.puedeEntrar(f, c)` (bordes + muros), tanto para el jugador como para la IA. Adicionalmente, los setters de mapa (`setObjetivo`, `setInicio`, `setEnemigoInicio`, `setEnemigo2Inicio`) descartan silenciosamente coordenadas invalidas como capa redundante para que un mapa mal definido nunca produzca galletas inalcanzables o actores atrapados.
 
 ## Criterios cubiertos (segun rubrica)
 

@@ -106,8 +106,11 @@ class Juego {
         do gestorNiveles.poblarLaberinto(laberinto, modo, nivel);
         do jugador.fijar(laberinto.getFilaInicio(), laberinto.getColInicio());
         do enemigo.fijar(laberinto.getFilaEnemigoInicio(), laberinto.getColEnemigoInicio());
-        // Enemigo 2 se posiciona siempre, pero solo se usa en modo 3.
-        do enemigo2.fijar(laberinto.getFilaEnemigo2Inicio(), laberinto.getColEnemigo2Inicio());
+        // Enemigo 2 solo se posiciona en modo Experto: evita dejarlo en
+        // una celda ilegal en modos 1 y 2 donde no se usa.
+        if (modo = 3) {
+            do enemigo2.fijar(laberinto.getFilaEnemigo2Inicio(), laberinto.getColEnemigo2Inicio());
+        }
         let movimientos = 0;
         let estado = 1;
         do renderizar();
@@ -244,6 +247,15 @@ class Juego {
 
     method void mostrarVictoria() {
         do Screen.clearScreen();
+        // Marco doble exterior (estilo trofeo): rectangulos concentricos.
+        do Screen.setColor(true);
+        do Screen.drawRectangle(60, 60, 451, 200);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(65, 65, 446, 195);
+        do Screen.setColor(true);
+        do Screen.drawRectangle(70, 70, 441, 190);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(73, 73, 438, 187);
         do Output.moveCursor(10, 25);
         do Output.printString(txtVictoria);
         do Output.moveCursor(12, 22);
@@ -257,6 +269,11 @@ class Juego {
 
     method void mostrarDerrota() {
         do Screen.clearScreen();
+        // Marco unico solido (estilo lapida): un solo bloque grueso oscuro.
+        do Screen.setColor(true);
+        do Screen.drawRectangle(60, 60, 451, 200);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(80, 80, 431, 180);
         do Output.moveCursor(10, 25);
         do Output.printString(txtDerrota);
         do Output.moveCursor(12, 22);

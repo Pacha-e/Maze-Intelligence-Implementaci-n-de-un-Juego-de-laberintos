@@ -116,7 +116,47 @@ class Enemigo {
             let frente = frente + 1;
         }
 
-        // Si no hay camino claro, mantener posicion o movimiento simple
+        // Respaldo voraz: si la heuristica no alcanza al jugador en 150
+        // expansiones, intenta un paso simple hacia el jugador escogiendo
+        // entre los 4 vecinos transitables el de menor distancia Manhattan.
+        // Asi el enemigo nunca se queda "congelado" frente al jugador.
+        do pasoVoraz(fObj, cObj, lab, ef, ec);
+        return;
+    }
+
+    /** Fallback: 1 paso voraz Manhattan respetando muros y companero. */
+    method void pasoVoraz(int fObj, int cObj, Laberinto lab, int ef, int ec) {
+        var int mejorF, mejorC, mejorD, d;
+        let mejorF = fila; let mejorC = col; let mejorD = distancia(fila, col, fObj, cObj);
+        // Evaluar arriba
+        if (lab.puedeEntrar(fila - 1, col)) {
+            if (~((fila - 1 = ef) & (col = ec))) {
+                let d = distancia(fila - 1, col, fObj, cObj);
+                if (d < mejorD) { let mejorD = d; let mejorF = fila - 1; let mejorC = col; }
+            }
+        }
+        // Evaluar abajo
+        if (lab.puedeEntrar(fila + 1, col)) {
+            if (~((fila + 1 = ef) & (col = ec))) {
+                let d = distancia(fila + 1, col, fObj, cObj);
+                if (d < mejorD) { let mejorD = d; let mejorF = fila + 1; let mejorC = col; }
+            }
+        }
+        // Evaluar izquierda
+        if (lab.puedeEntrar(fila, col - 1)) {
+            if (~((fila = ef) & (col - 1 = ec))) {
+                let d = distancia(fila, col - 1, fObj, cObj);
+                if (d < mejorD) { let mejorD = d; let mejorF = fila; let mejorC = col - 1; }
+            }
+        }
+        // Evaluar derecha
+        if (lab.puedeEntrar(fila, col + 1)) {
+            if (~((fila = ef) & (col + 1 = ec))) {
+                let d = distancia(fila, col + 1, fObj, cObj);
+                if (d < mejorD) { let mejorD = d; let mejorF = fila; let mejorC = col + 1; }
+            }
+        }
+        let fila = mejorF; let col = mejorC;
         return;
     }
 

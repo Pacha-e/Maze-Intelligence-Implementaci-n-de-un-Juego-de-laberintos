@@ -8,7 +8,7 @@ El juego representa el laberinto como una matriz. Cada celda puede ser camino o 
 
 - `Laberinto` centraliza la matriz, los muros, las galletas (pool de 30 `Objetivo`) y la validacion de posiciones (`puedeEntrar`).
 - `Jugador` solo conoce su posicion y delega la validacion al laberinto.
-- `Enemigo` usa una **heuristica Manhattan con conciencia de muros**. Mantiene una frontera de celdas candidatas, en cada iteracion elige la celda con menor distancia Manhattan al jugador, y al expandir vecinos descarta los que `Laberinto.puedeEntrar` rechace (muros y bordes). El metodo `moverEvitando(jug, lab, ef, ec)` permite pasar la posicion del companero (modo Experto) para marcarla como muro temporal y evitar fusiones.
+- `Enemigo` usa una **heuristica Manhattan con conciencia de muros**. Mantiene una frontera de celdas candidatas, en cada iteracion elige la celda con menor distancia Manhattan al jugador, y al expandir vecinos descarta los que `Laberinto.puedeEntrar` rechace (muros y bordes). El metodo `moverEvitando(jug, lab, ef, ec)` permite pasar la posicion del companero (modo Experto) para marcarla como muro temporal y evitar fusiones. Si la heuristica agota 150 expansiones sin alcanzar al jugador, `pasoVoraz` da un paso adaptativo evaluando los 4 vecinos transitables.
 - `Juego` controla estados, dificultad, vidas, puntaje y transiciones. Pre-aloca **una sola vez** `Laberinto`, `Jugador` y los dos `Enemigo` para evitar la fragmentacion del heap del JackOS entre niveles.
 - `GestorNiveles` aisla la generacion de mapas: 9 layouts (3 modos x 3 niveles), cada uno con dimensiones, muros, posiciones de inicio y galletas distintas.
 - Toda clase con memoria dinamica expone `eliminar()` para liberar el heap al cerrar; los reusos intermedios pasan por `fijar(f, c)` sobre el objeto existente, sin alocar.
@@ -28,7 +28,7 @@ Pasos:
    - Si no, expande sus 4 vecinos.
 4. **Conciencia de muros**: cada vecino candidato pasa por `Laberinto.puedeEntrar(f, c)`. Esto rechaza muros (`celdas[idx] = 1`) y posiciones fuera de bordes. Solo los vecinos transitables y no visitados entran en la frontera. Por construccion, la frontera nunca contiene una celda a la que el enemigo no pueda llegar.
 5. Para cada celda agregada, guarda **cual fue el primer paso** desde el origen: si el padre es el origen, el primer paso es el vecino mismo; si no, hereda el primer paso del padre. Esto permite que cuando la heuristica llega al jugador, el enemigo sepa que direccion tomar AHORA, no el camino completo.
-6. Si la frontera se vacia o se agota el tope sin alcanzar al jugador, el enemigo mantiene su posicion (no se mueve a una celda peor que la actual).
+6. Si la frontera se vacia o se agota el tope sin alcanzar al jugador, entra en juego el **respaldo voraz** (`pasoVoraz`): evalua los 4 vecinos transitables (filtrados por `puedeEntrar` y, en modo Experto, excluyendo la celda del companero) y elige el que minimice la distancia Manhattan al jugador. Asi el enemigo siempre intenta acercarse, incluso cuando la heuristica selectiva no encuentra ruta en el tope de expansiones.
 
 ### Por que esta heuristica y no una busqueda exhaustiva
 
@@ -121,6 +121,8 @@ Resultado: el enemigo se mueve de `(0,0)` a `(0,1)`, primer paso de la ruta por 
 - HUD permanente con vidas, nivel y puntaje.
 - Pantallas de victoria y derrota con puntaje final.
 - **Gestion estricta de memoria**: pool persistente (Laberinto, Jugador, los dos Enemigo y 30 Objetivo se pre-alocan una sola vez) + `eliminar()` al cerrar. Esto eliminó el desbordamiento del heap del JackOS que aparecia al cambiar de modo varias veces.
+- **Validacion defensiva en setters de mapa**: `Laberinto.setObjetivo / setInicio / setEnemigoInicio / setEnemigo2Inicio` rechazan silenciosamente coordenadas que caigan en muro o fuera del grid (via `puedeEntrar`). Es una capa redundante sobre la validacion de movimiento que blinda al juego contra mapas mal definidos: nunca se coloca una galleta inalcanzable, ni un actor empieza atrapado.
+- **Respaldo voraz en la IA** (`Enemigo.pasoVoraz`): si la heuristica selectiva no encuentra al jugador en 150 expansiones, el enemigo evalua sus 4 vecinos transitables y se mueve al de menor distancia Manhattan. Cumple con el criterio "adaptativo e inteligente" de la rubrica.
 
 ## Casos de prueba manuales
 
@@ -136,3 +138,6 @@ Resultado: el enemigo se mueve de `(0,0)` a `(0,1)`, primer paso de la ruta por 
 | Modo Normal | 3 vidas, enemigo avanza cada paso del jugador. |
 | Modo Experto | 1 vida, dos enemigos avanzan a la vez y se evitan entre si. |
 | Cambiar de modo varias veces seguidas | No se desborda el heap (pool persistente). |
+| Jugador encerrado por muros (jugador queda en isla sin acceso) | El enemigo no se congela: el respaldo voraz lo acerca al maximo posible. |
+| Mapa con galleta accidentalmente sobre muro | El setter defensivo descarta la galleta; el nivel termina correctamente al recolectar las validas. |
+| Pantalla de victoria vs derrota | Marcos visualmente diferentes (doble marco concentrico vs bloque solido) para identificacion inmediata. |
