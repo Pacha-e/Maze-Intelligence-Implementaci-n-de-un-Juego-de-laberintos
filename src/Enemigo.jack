@@ -1,0 +1,127 @@
+/** IA avanzada con BFS y Persecucion voraz. */
+class Enemigo {
+    field int fila, col;
+    field int filaAnt, colAnt;
+    field int capacidad;
+    field Array colaF, colaC, primeraF, primeraC, visitado;
+
+    constructor Enemigo new(int f, int c, int max) {
+        let fila = f; let col = c;
+        let filaAnt = f; let colAnt = c;
+        let capacidad = max;
+        let colaF = Array.new(capacidad);
+        let colaC = Array.new(capacidad);
+        let primeraF = Array.new(capacidad);
+        let primeraC = Array.new(capacidad);
+        let visitado = Array.new(capacidad);
+        return this;
+    }
+
+    method void moverHacia(Jugador jug, Laberinto lab) {
+        var int frente, final, fAct, cAct, fObj, cObj, hallado;
+        let filaAnt = fila; let colAnt = col;
+        let fObj = jug.getFila(); let cObj = jug.getCol();
+        do limpiarVisitados();
+        let frente = 0; let final = 0; let hallado = -1;
+
+        let colaF[final] = fila; let colaC[final] = col;
+        let primeraF[final] = fila; let primeraC[final] = col;
+        do marcarVisitado(fila, col, lab);
+        let final = final + 1;
+
+        while ((frente < final) & (hallado < 0)) {
+            let fAct = colaF[frente]; let cAct = colaC[frente];
+            if ((fAct = fObj) & (cAct = cObj)) {
+                let hallado = frente;
+            } else {
+                let final = agregarVecino(fAct, cAct, fAct - 1, cAct, frente, final, lab);
+                let final = agregarVecino(fAct, cAct, fAct + 1, cAct, frente, final, lab);
+                let final = agregarVecino(fAct, cAct, fAct, cAct - 1, frente, final, lab);
+                let final = agregarVecino(fAct, cAct, fAct, cAct + 1, frente, final, lab);
+            }
+            let frente = frente + 1;
+        }
+
+        if (hallado < 0) { do movimientoVoraz(jug, lab); }
+        else { let fila = primeraF[hallado]; let col = primeraC[hallado]; }
+        return;
+    }
+
+    method int agregarVecino(int bF, int bC, int nF, int nC, int bI, int fin, Laberinto lab) {
+        if (fin < capacidad) {
+            if (lab.puedeEntrar(nF, nC)) {
+                if (~esVisitado(nF, nC, lab)) {
+                    let colaF[fin] = nF; let colaC[fin] = nC;
+                    if ((bF = fila) & (bC = col)) {
+                        let primeraF[fin] = nF; let primeraC[fin] = nC;
+                    } else {
+                        let primeraF[fin] = primeraF[bI]; let primeraC[fin] = primeraC[bI];
+                    }
+                    do marcarVisitado(nF, nC, lab);
+                    let fin = fin + 1;
+                }
+            }
+        }
+        return fin;
+    }
+
+    method void movimientoVoraz(Jugador jug, Laberinto lab) {
+        var int dMejor, dAct, fMejor, cMejor;
+        let fMejor = fila; let cMejor = col;
+        let dMejor = distancia(fila, col, jug.getFila(), jug.getCol());
+
+        let dAct = probarDireccion(fila - 1, col, jug, lab);
+        if (dAct < dMejor) { let dMejor = dAct; let fMejor = fila - 1; let cMejor = col; }
+        
+        let dAct = probarDireccion(fila + 1, col, jug, lab);
+        if (dAct < dMejor) { let dMejor = dAct; let fMejor = fila + 1; let cMejor = col; }
+        
+        let dAct = probarDireccion(fila, col - 1, jug, lab);
+        if (dAct < dMejor) { let dMejor = dAct; let fMejor = fila; let cMejor = col - 1; }
+        
+        let dAct = probarDireccion(fila, col + 1, jug, lab);
+        if (dAct < dMejor) { let dMejor = dAct; let fMejor = fila; let cMejor = col + 1; }
+
+        let fila = fMejor; let col = cMejor;
+        return;
+    }
+
+    method int probarDireccion(int f, int c, Jugador j, Laberinto l) {
+        if (l.puedeEntrar(f, c)) { return distancia(f, c, j.getFila(), j.getCol()); }
+        return 1000;
+    }
+
+    method int distancia(int f1, int c1, int f2, int c2) {
+        var int df, dc;
+        let df = f1 - f2; let dc = c1 - c2;
+        if (df < 0) { let df = -df; }
+        if (dc < 0) { let dc = -dc; }
+        return df + dc;
+    }
+
+    method void limpiarVisitados() {
+        var int i; let i = 0;
+        while (i < capacidad) { let visitado[i] = 0; let i = i + 1; }
+        return;
+    }
+
+    method boolean esVisitado(int f, int c, Laberinto lab) { return visitado[lab.getIndice(f, c)] = 1; }
+    method void marcarVisitado(int f, int c, Laberinto lab) { let visitado[lab.getIndice(f, c)] = 1; return; }
+    method void retroceder() { let fila = filaAnt; let col = colAnt; return; }
+    method boolean estaEn(int f, int c) { return (fila = f) & (col = c); }
+    method void dibujar(Laberinto lab) {
+        var int x, y;
+        let x = lab.celdaX(col); let y = lab.celdaY(fila);
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x + 2, y + 2, x + 11, y + 11);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x + 5, y + 5, x + 8, y + 8);
+        return;
+    }
+    method void eliminar() {
+        do colaF.dispose(); do colaC.dispose();
+        do primeraF.dispose(); do primeraC.dispose();
+        do visitado.dispose(); do Memory.deAlloc(this);
+        return;
+    }
+}

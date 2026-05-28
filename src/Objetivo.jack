@@ -1,0 +1,14 @@
+/** Representa un punto de puntaje en el laberinto. */
+class Objetivo {
+    field int fila, col;
+    constructor Objetivo new(int f, int c) {
+        let fila = f; let col = c;
+        return this;
+    }
+    method int getFila() { return fila; }
+    method int getCol() { return col; }
+    method void eliminar() {
+        do Memory.deAlloc(this);
+        return;
+    }
+}

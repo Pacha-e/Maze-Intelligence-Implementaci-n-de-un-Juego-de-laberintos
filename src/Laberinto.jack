@@ -1,0 +1,164 @@
+/** Estructura del laberinto y gestion de objetivos. */
+class Laberinto {
+    field Array celdas;
+    field int filas, cols;
+    field int filaInicio, colInicio;
+    field int filaEnemigoInicio, colEnemigoInicio;
+    field Array objetivos;
+    field int conteoObjetivos;
+    field int capacidadObjetivos;
+
+    constructor Laberinto new(int f, int c) {
+        let filas = f;
+        let cols = c;
+        let celdas = Array.new(filas * cols);
+        let capacidadObjetivos = 30;
+        let objetivos = Array.new(capacidadObjetivos);
+        let conteoObjetivos = 0;
+        do vaciar();
+        return this;
+    }
+
+    method void vaciar() {
+        var int i, total;
+        let i = 0;
+        let total = filas * cols;
+        while (i < total) {
+            let celdas[i] = 0;
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void construirBorde() {
+        var int f, c;
+        let c = 0;
+        while (c < cols) {
+            do setMuro(0, c);
+            do setMuro(filas - 1, c);
+            let c = c + 1;
+        }
+        let f = 0;
+        while (f < filas) {
+            do setMuro(f, 0);
+            do setMuro(f, cols - 1);
+            let f = f + 1;
+        }
+        return;
+    }
+
+    method void filaMuro(int f, int c1, int c2, int hueco) {
+        var int c;
+        let c = c1;
+        while (~(c > c2)) {
+            if (~(c = hueco)) { do setMuro(f, c); }
+            let c = c + 1;
+        }
+        return;
+    }
+
+    method void colMuro(int c, int f1, int f2, int hueco) {
+        var int f;
+        let f = f1;
+        while (~(f > f2)) {
+            if (~(f = hueco)) { do setMuro(f, c); }
+            let f = f + 1;
+        }
+        return;
+    }
+
+    method void setMuro(int f, int c) {
+        let celdas[(f * cols) + c] = 1;
+        return;
+    }
+
+    method void setObjetivo(int f, int c) {
+        if (conteoObjetivos < capacidadObjetivos) {
+            let objetivos[conteoObjetivos] = Objetivo.new(f, c);
+            let conteoObjetivos = conteoObjetivos + 1;
+        }
+        return;
+    }
+
+    method void removerObjetivo(int f, int c) {
+        var int i;
+        var Objetivo obj;
+        let i = 0;
+        while (i < conteoObjetivos) {
+            let obj = objetivos[i];
+            if ((obj.getFila() = f) & (obj.getCol() = c)) {
+                do obj.eliminar();
+                while (i < (conteoObjetivos - 1)) {
+                    let objetivos[i] = objetivos[i + 1];
+                    let i = i + 1;
+                }
+                let objetivos[conteoObjetivos - 1] = null; 
+                let conteoObjetivos = conteoObjetivos - 1;
+                return;
+            }
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method boolean puedeEntrar(int f, int c) {
+        if ((f < 0) | (c < 0) | (~(f < filas)) | (~(c < cols))) { return false; }
+        return ~(celdas[(f * cols) + c] = 1);
+    }
+
+    method void dibujar() {
+        var int f, c, x, y, i;
+        var Objetivo obj;
+        let f = 0; let y = 42;
+        while (f < filas) {
+            let c = 0; let x = 10;
+            while (c < cols) {
+                if (celdas[(f * cols) + c] = 1) {
+                    do Screen.setColor(true);
+                    do Screen.drawRectangle(x, y, x + 13, y + 13);
+                }
+                let c = c + 1; let x = x + 16;
+            }
+            let f = f + 1; let y = y + 16;
+        }
+        let i = 0;
+        while (i < conteoObjetivos) {
+            let obj = objetivos[i];
+            let x = celdaX(obj.getCol());
+            let y = celdaY(obj.getFila());
+            do Screen.setColor(true);
+            do Screen.drawRectangle(x + 4, y + 4, x + 9, y + 9);
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method int celdaX(int c) { return 10 + (c * 16); }
+    method int celdaY(int f) { return 42 + (f * 16); }
+    method int getFilaInicio() { return filaInicio; }
+    method int getColInicio() { return colInicio; }
+    method int getFilaEnemigoInicio() { return filaEnemigoInicio; }
+    method int getColEnemigoInicio() { return colEnemigoInicio; }
+    method int getConteoCeldas() { return filas * cols; }
+    method int getConteoObjetivos() { return conteoObjetivos; }
+    method int getFilaObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getFila(); }
+    method int getColObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getCol(); }
+    method int getIndice(int f, int c) { return (f * cols) + c; }
+    method void setInicio(int f, int c) { let filaInicio = f; let colInicio = c; return; }
+    method void setEnemigoInicio(int f, int c) { let filaEnemigoInicio = f; let colEnemigoInicio = c; return; }
+
+    method void eliminar() {
+        var int i;
+        var Objetivo obj;
+        let i = 0;
+        while (i < conteoObjetivos) {
+            let obj = objetivos[i];
+            if (~(obj = null)) { do obj.eliminar(); }
+            let i = i + 1;
+        }
+        do objetivos.dispose();
+        do celdas.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+}

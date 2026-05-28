@@ -1,10 +1,10 @@
+/** Punto de entrada principal del juego. */
 class Main {
     function void main() {
-        var Game game;
-
-        let game = Game.new();
-        do game.run();
-        do game.dispose();
+        var Juego juego;
+        let juego = Juego.new();
+        do juego.ejecutar();
+        do juego.eliminar();
         return;
     }
 }

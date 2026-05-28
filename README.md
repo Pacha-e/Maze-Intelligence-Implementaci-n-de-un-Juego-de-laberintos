@@ -1,20 +1,21 @@
 # Maze Intelligence
 
-Juego de laberintos desarrollado en Jack para Nand2Tetris. El jugador debe llegar a la salida mientras un enemigo calcula una ruta por el laberinto y lo persigue.
+Juego de laberintos desarrollado en Jack para Nand2Tetris. El jugador debe recolectar todas las galletas de cada nivel mientras un enemigo controlado por IA (BFS sobre el grid) lo persigue por los caminos validos del mapa.
 
 ## Controles
 
-- `WASD` o flechas: mover jugador
-- `R`: reiniciar partida
-- `Q`: salir
+- `W` `A` `S` `D` o flechas: mover al jugador.
+- `Q` durante la partida: regresar al menu principal.
 - En el menu inicial:
-  - `1`: Entrenamiento, 3 vidas y enemigo lento
-  - `2`: Normal, 2 vidas y persecucion completa
-  - `3`: Experto, 1 vida y persecucion agresiva
+  - `1`: Modo Entrenamiento, 3 vidas y enemigo lento.
+  - `2`: Modo Normal, 2 vidas y persecucion estandar.
+  - `3`: Modo Experto, 1 vida y persecucion agresiva (doble movimiento).
+  - Flechas Arriba/Abajo + Enter para navegar el menu.
+  - `Q` desde el menu: cierra el juego.
 
 ## Como ejecutar
 
-### Opcion web
+### Opcion web (recomendada)
 
 1. Abrir el Jack Compiler web: <https://nand2tetris.github.io/web-ide/compiler/>.
 2. Cargar la carpeta `src` con el boton de carpeta.
@@ -38,19 +39,23 @@ JackCompiler src
 
 El proyecto usa solo las clases estandar del sistema Jack: `Screen`, `Keyboard`, `Output`, `Array`, `Memory` y `Sys`.
 
-## Estructura
+## Estructura del codigo (`src/`)
 
-- `Main.jack`: punto de entrada.
-- `Game.jack`: ciclo principal, estados, puntaje, modos y vidas.
-- `Maze.jack`: matriz del laberinto, colisiones y renderizado del mapa.
-- `Player.jack`: movimiento validado del jugador.
-- `Enemy.jack`: persecucion con busqueda BFS sobre el grid.
+- `Main.jack`: punto de entrada. Instancia `Juego` y arranca el ciclo principal.
+- `Juego.jack`: orquestador. Maneja estados (menu/partida/victoria/derrota), modo de dificultad, vidas, puntaje y transiciones entre niveles.
+- `MenuPrincipal.jack`: interfaz retro del menu inicial con navegacion por flechas y seleccion directa por tecla.
+- `GestorNiveles.jack`: fabrica de mapas. Construye los `Laberinto` de cada nivel (1, 2 y 3) con muros, inicios y galletas.
+- `Laberinto.jack`: matriz del mapa. Centraliza muros, validacion de movimientos (`puedeEntrar`), almacenamiento de galletas y renderizado del grid.
+- `Jugador.jack`: posicion del heroe y movimiento validado contra el laberinto.
+- `Enemigo.jack`: IA. Implementa BFS sobre el grid con respaldo voraz (distancia Manhattan) cuando no hay ruta.
+- `Objetivo.jack`: representa una galleta (par fila/columna con su propio ciclo de vida en heap).
 
-## Criterios cubiertos
+## Criterios cubiertos (segun rubrica)
 
-- Correctitud logica: movimiento en grid con limites, muros y salida.
-- IA del enemigo: busqueda BFS para encontrar la ruta corta hasta el jugador; si no hay ruta, usa una heuristica de respaldo.
-- Estados: menu, juego, victoria y derrota.
-- Validacion: todas las posiciones pasan por `Maze.canEnter`.
-- Modularidad: clases separadas por responsabilidad.
-- Renderizado: muros, salida, jugador y enemigo diferenciados en pantalla.
+- **Correctitud logica:** movimiento valido en el grid, deteccion de colisiones contra muros y bordes, captura del jugador, recoleccion de galletas, fin de nivel al recolectar todas, fin de juego al perder todas las vidas.
+- **IA del enemigo:** BFS para hallar el primer paso de la ruta mas corta hasta el jugador respetando muros; respaldo heuristico voraz por distancia Manhattan cuando la cola se llena o no hay ruta.
+- **Manejo de estados:** menu (0), partida (1), victoria (2), derrota (3). Transiciones controladas exclusivamente desde `Juego`.
+- **Validacion de movimientos:** toda posicion pasa por `Laberinto.puedeEntrar`, que cubre bordes, muros y posiciones invalidas.
+- **Modularidad:** ocho clases con responsabilidades claras y bajo acoplamiento.
+- **Clean Code:** nombres en espanol, metodos cortos, sin redundancia, todos los objetos liberan memoria con `eliminar()`.
+- **Renderizado:** muros, galletas, jugador y enemigo diferenciados por forma y tamano; HUD con vidas, nivel y puntaje.

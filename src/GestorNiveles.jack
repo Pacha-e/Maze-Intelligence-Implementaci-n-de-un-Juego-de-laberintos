@@ -1,0 +1,75 @@
+/** Generador de mapas. Cada nivel tiene dimensiones, layout y galletas propios. */
+class GestorNiveles {
+    constructor GestorNiveles new() { return this; }
+
+    /** Construye el laberinto del nivel solicitado.
+     *  Nivel 1: dos camaras conectadas por un solo paso (10x12).
+     *  Nivel 2: corredores en zigzag con bottlenecks (10x16).
+     *  Nivel 3: laberinto extendido con tres camaras (11x24).
+     */
+    method Laberinto crearLaberinto(int nivel) {
+        var Laberinto lab;
+        let lab = null;
+
+        if (nivel = 1) {
+            let lab = Laberinto.new(10, 12);
+            do lab.construirBorde();
+            // Pared horizontal central, un solo paso en col 6
+            do lab.filaMuro(5, 1, 10, 6);
+            // Mini barrera vertical en la camara superior
+            do lab.colMuro(3, 1, 3, -1);
+            do lab.setInicio(1, 1);
+            do lab.setEnemigoInicio(8, 10);
+            do lab.setObjetivo(1, 10);
+            do lab.setObjetivo(8, 1);
+            do lab.setObjetivo(3, 6);
+            do lab.setObjetivo(8, 6);
+        }
+
+        if (nivel = 2) {
+            let lab = Laberinto.new(10, 16);
+            do lab.construirBorde();
+            // Zigzag de paredes verticales con huecos alternados
+            do lab.colMuro(5, 1, 6, 4);
+            do lab.colMuro(10, 3, 8, 6);
+            // Cortes horizontales que crean bottlenecks
+            do lab.filaMuro(2, 6, 9, 7);
+            do lab.filaMuro(7, 11, 14, 12);
+            do lab.setInicio(1, 1);
+            do lab.setEnemigoInicio(8, 14);
+            do lab.setObjetivo(1, 14);
+            do lab.setObjetivo(8, 1);
+            do lab.setObjetivo(5, 8);
+            do lab.setObjetivo(1, 8);
+            do lab.setObjetivo(8, 8);
+        }
+
+        if (nivel = 3) {
+            let lab = Laberinto.new(11, 24);
+            do lab.construirBorde();
+            // Dos paredes horizontales que dividen tres camaras
+            do lab.filaMuro(4, 1, 22, 5);
+            do lab.filaMuro(7, 1, 22, 18);
+            // Cortes verticales que parten las camaras superior e inferior
+            do lab.colMuro(11, 1, 3, 2);
+            do lab.colMuro(11, 8, 9, 9);
+            // Obstaculo en la camara media para forzar rodeo
+            do lab.filaMuro(5, 8, 9, -1);
+            do lab.setInicio(1, 1);
+            do lab.setEnemigoInicio(9, 22);
+            do lab.setObjetivo(1, 22);
+            do lab.setObjetivo(3, 1);
+            do lab.setObjetivo(6, 11);
+            do lab.setObjetivo(5, 22);
+            do lab.setObjetivo(9, 1);
+            do lab.setObjetivo(8, 13);
+        }
+
+        return lab;
+    }
+
+    method void eliminar() {
+        do Memory.deAlloc(this);
+        return;
+    }
+}

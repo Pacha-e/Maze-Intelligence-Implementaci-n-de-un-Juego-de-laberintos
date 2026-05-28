@@ -1,0 +1,260 @@
+/** Coordina la logica del juego, estados y transiciones de nivel. */
+class Juego {
+    field Laberinto laberinto;
+    field Jugador jugador;
+    field Enemigo enemigo;
+    field GestorNiveles gestorNiveles;
+    field MenuPrincipal menu;
+    field int estado; // 0: Menu, 1: Juego, 2: Gano, 3: Perdio
+    field int nivel;
+    field int modo;
+    field int vidas;
+    field int puntaje;
+    field int movimientos;
+    field boolean salir;
+
+    constructor Juego new() {
+        let gestorNiveles = GestorNiveles.new();
+        let menu = MenuPrincipal.new();
+        let laberinto = null; 
+        let jugador = null;
+        let enemigo = null;
+        let estado = 0;
+        let nivel = 1;
+        let puntaje = 0;
+        let salir = false;
+        return this;
+    }
+
+    method void ejecutar() {
+        while (~salir) {
+            if (estado = 0) { do manejarMenu(); }
+            if (estado = 1) { do manejarCicloJuego(); }
+            if (estado = 2) { do mostrarVictoria(); }
+            if (estado = 3) { do mostrarDerrota(); }
+            do Sys.wait(5);
+        }
+        return;
+    }
+
+    method void manejarMenu() {
+        let modo = menu.mostrar();
+        if (modo = 0) {
+            do mostrarSalidaTemporal();
+            let estado = 0;
+        } else {
+            let puntaje = 0;
+            let nivel = 1;
+            do configurarVidas();
+            do iniciarNivel();
+        }
+        return;
+    }
+
+    method void mostrarSalidaTemporal() {
+        do Screen.clearScreen();
+        do Output.moveCursor(10, 25);
+        do Output.printString("GRACIAS POR JUGAR");
+        do Output.moveCursor(12, 9);
+        do Output.printString("PRESIONA CUALQUIER TECLA PARA VOLVER AL MENU");
+        do esperarTecla();
+        return;
+    }
+
+    method void configurarVidas() {
+        if (modo = 1) { let vidas = 3; }
+        if (modo = 2) { let vidas = 2; }
+        if (modo = 3) { let vidas = 1; }
+        return;
+    }
+
+    method void iniciarNivel() {
+        do limpiarObjetos(); 
+        let laberinto = gestorNiveles.crearLaberinto(nivel);
+        let jugador = Jugador.new(laberinto.getFilaInicio(), laberinto.getColInicio());
+        let enemigo = Enemigo.new(laberinto.getFilaEnemigoInicio(), laberinto.getColEnemigoInicio(), laberinto.getConteoCeldas());
+        let movimientos = 0;
+        let estado = 1;
+        do renderizar();
+        return;
+    }
+
+    method void manejarCicloJuego() {
+        var int tecla;
+        var int df, dc;
+        var boolean movido;
+        var int i, fr, fc;
+
+        let tecla = Keyboard.keyPressed();
+        if (tecla = 81) { 
+            do esperarLiberacion();
+            do limpiarObjetos(); 
+            let estado = 0; 
+            return; 
+        }
+
+        let df = 0; let dc = 0;
+        if ((tecla = 130) | (tecla = 65)) { let dc = -1; }
+        if ((tecla = 131) | (tecla = 87)) { let df = -1; }
+        if ((tecla = 132) | (tecla = 68)) { let dc = 1; }
+        if ((tecla = 133) | (tecla = 83)) { let df = 1; }
+
+        if (~(df = 0) | ~(dc = 0)) {
+            let movido = jugador.intentarMover(df, dc, laberinto);
+            if (movido) {
+                let movimientos = movimientos + 1;
+                let puntaje = puntaje + modo;
+                
+                let i = 0;
+                while (i < laberinto.getConteoObjetivos()) {
+                    let fr = laberinto.getFilaObjetivo(i);
+                    let fc = laberinto.getColObjetivo(i);
+                    if (jugador.estaEn(fr, fc)) {
+                        do laberinto.removerObjetivo(fr, fc);
+                        let puntaje = puntaje + 100;
+                    } else {
+                        let i = i + 1;
+                    }
+                }
+
+                if (laberinto.getConteoObjetivos() = 0) {
+                    do avanzarNivel();
+                    return;
+                }
+
+                do moverEnemigo();
+                if (enemigo.estaEn(jugador.getFila(), jugador.getCol())) {
+                    do perderVida();
+                } else {
+                    do renderizar();
+                }
+            }
+            do esperarLiberacion();
+        }
+        return;
+    }
+
+    method void moverEnemigo() {
+        do enemigo.moverHacia(jugador, laberinto);
+        if (modo = 3) {
+            if (esMultiplo(movimientos, 3)) {
+                if (~enemigo.estaEn(jugador.getFila(), jugador.getCol())) {
+                    do enemigo.moverHacia(jugador, laberinto);
+                }
+            }
+        }
+        if (modo = 1) {
+            if (~esMultiplo(movimientos, 2)) {
+                do enemigo.retroceder();
+            }
+        }
+        return;
+    }
+
+    method boolean esMultiplo(int v, int d) {
+        var int q;
+        let q = v / d;
+        return v = (q * d);
+    }
+
+    method void avanzarNivel() {
+        let puntaje = puntaje + (100 * nivel * modo);
+        if (nivel = 3) {
+            let estado = 2;
+        } else {
+            let nivel = nivel + 1;
+            do iniciarNivel();
+        }
+        return;
+    }
+
+    method void perderVida() {
+        let vidas = vidas - 1;
+        if (vidas < 1) {
+            let estado = 3;
+        } else {
+            do iniciarNivel();
+        }
+        return;
+    }
+
+    method void renderizar() {
+        do Screen.clearScreen();
+        do laberinto.dibujar();
+        do jugador.dibujar(laberinto);
+        do enemigo.dibujar(laberinto);
+        do dibujarPanel();
+        return;
+    }
+
+    method void dibujarPanel() {
+        do Output.moveCursor(0, 0);
+        do Output.printString("                                                                ");
+        do Output.moveCursor(0, 0);
+        do Output.printString("Vidas: "); do Output.printInt(vidas);
+        do Output.printString(" | Nivel: "); do Output.printInt(nivel);
+        do Output.printString(" | Puntos: "); do Output.printInt(puntaje);
+        return;
+    }
+
+    method void mostrarVictoria() {
+        do Screen.clearScreen();
+        do Output.moveCursor(10, 25);
+        do Output.printString("!HAS ESCAPADO!");
+        do Output.moveCursor(12, 22);
+        do Output.printString("Puntaje Final: "); do Output.printInt(puntaje);
+        do Output.moveCursor(15, 15);
+        do Output.printString("Presiona cualquier tecla para el menu");
+        do esperarTecla();
+        let estado = 0;
+        return;
+    }
+
+    method void mostrarDerrota() {
+        do Screen.clearScreen();
+        do Output.moveCursor(10, 25);
+        do Output.printString("!CAPTURADO!");
+        do Output.moveCursor(12, 22);
+        do Output.printString("Puntaje Final: "); do Output.printInt(puntaje);
+        do Output.moveCursor(15, 15);
+        do Output.printString("Presiona cualquier tecla para el menu");
+        do esperarTecla();
+        let estado = 0;
+        return;
+    }
+
+    method void esperarTecla() {
+        while (Keyboard.keyPressed() = 0) { do Sys.wait(5); }
+        do esperarLiberacion();
+        return;
+    }
+
+    method void esperarLiberacion() {
+        while (~(Keyboard.keyPressed() = 0)) { do Sys.wait(5); }
+        return;
+    }
+
+    method void limpiarObjetos() {
+        if (~(laberinto = null)) { 
+            do laberinto.eliminar(); 
+            let laberinto = null;
+        }
+        if (~(jugador = null)) { 
+            do jugador.eliminar(); 
+            let jugador = null;
+        }
+        if (~(enemigo = null)) { 
+            do enemigo.eliminar(); 
+            let enemigo = null;
+        }
+        return;
+    }
+
+    method void eliminar() {
+        do limpiarObjetos();
+        do gestorNiveles.eliminar();
+        do menu.eliminar();
+        do Memory.deAlloc(this);
+        return;
+    }
+}

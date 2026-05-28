@@ -1,0 +1,31 @@
+/** Controla al heroe del juego. */
+class Jugador {
+    field int fila, col;
+    constructor Jugador new(int f, int c) {
+        let fila = f; let col = c;
+        return this;
+    }
+    method boolean intentarMover(int df, int dc, Laberinto lab) {
+        var int nf, nc;
+        let nf = fila + df; let nc = col + dc;
+        if (lab.puedeEntrar(nf, nc)) {
+            let fila = nf; let col = nc;
+            return true;
+        }
+        return false;
+    }
+    method boolean estaEn(int f, int c) { return (fila = f) & (col = c); }
+    method void dibujar(Laberinto lab) {
+        var int x, y;
+        let x = lab.celdaX(col); let y = lab.celdaY(fila);
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x + 3, y + 3, x + 10, y + 10);
+        return;
+    }
+    method int getFila() { return fila; }
+    method int getCol() { return col; }
+    method void eliminar() {
+        do Memory.deAlloc(this);
+        return;
+    }
+}
