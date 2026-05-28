@@ -1,9 +1,24 @@
 /** Interfaz de usuario para la pantalla de inicio. */
 class MenuPrincipal {
     field int seleccion;
+    field String txtTitulo, txtMision, txtSalir;
+    field String txtSelPrefijo, txtNoSelPrefijo, txtBracketCierre;
+    field String txtSelSufijo, txtNoSelSufijo;
+    field String txtModoEnt, txtModoNor, txtModoExp;
 
     constructor MenuPrincipal new() {
-        let seleccion = 2; // Inicia en modo Normal por defecto
+        let seleccion = 2;
+        let txtTitulo = "LABERINTO";
+        let txtMision = "RECOLECTA LAS GALLETAS Y ESCAPA";
+        let txtSalir = "PRESIONA Q PARA SALIR";
+        let txtSelPrefijo = ">>> [ ";
+        let txtNoSelPrefijo = "    [ ";
+        let txtBracketCierre = " ] ";
+        let txtSelSufijo = " <<<";
+        let txtNoSelSufijo = "    ";
+        let txtModoEnt = "MODO ENTRENAMIENTO";
+        let txtModoNor = "MODO NORMAL       ";
+        let txtModoExp = "MODO EXPERTO      ";
         return this;
     }
 
@@ -90,11 +105,11 @@ class MenuPrincipal {
         
         // Titulo LABERINTO (Fila 6)
         do Output.moveCursor(6, 27);
-        do Output.printString("LABERINTO");
+        do Output.printString(txtTitulo);
 
         // 3. Instruccion de mision (Fila 11)
         do Output.moveCursor(11, 16);
-        do Output.printString("RECOLECTA LAS GALLETAS Y ESCAPA");
+        do Output.printString(txtMision);
 
         // 4. Caja inferior para la salida (Borde uniforme de 3 pixeles)
         do Screen.setColor(true);
@@ -104,7 +119,7 @@ class MenuPrincipal {
         
         // Texto de salida (Fila 20)
         do Output.moveCursor(20, 21);
-        do Output.printString("PRESIONA Q PARA SALIR");
+        do Output.printString(txtSalir);
 
         // Decoracion en esquinas
         do Screen.setColor(true);
@@ -127,24 +142,24 @@ class MenuPrincipal {
     /** Imprime una opcion con corchetes y resaltado dinamico. */
     method void imprimirOpcion(int f, int c, int num) {
         do Output.moveCursor(f, c);
-        
-        if (seleccion = num) {
-            do Output.printString(">>> [ ");
-        } else {
-            do Output.printString("    [ ");
-        }
-        
-        do Output.printInt(num);
-        do Output.printString(" ] ");
-        
-        if (num = 1) { do Output.printString("MODO ENTRENAMIENTO"); }
-        if (num = 2) { do Output.printString("MODO NORMAL       "); }
-        if (num = 3) { do Output.printString("MODO EXPERTO      "); }
 
         if (seleccion = num) {
-            do Output.printString(" <<<");
+            do Output.printString(txtSelPrefijo);
         } else {
-            do Output.printString("    ");
+            do Output.printString(txtNoSelPrefijo);
+        }
+
+        do Output.printInt(num);
+        do Output.printString(txtBracketCierre);
+
+        if (num = 1) { do Output.printString(txtModoEnt); }
+        if (num = 2) { do Output.printString(txtModoNor); }
+        if (num = 3) { do Output.printString(txtModoExp); }
+
+        if (seleccion = num) {
+            do Output.printString(txtSelSufijo);
+        } else {
+            do Output.printString(txtNoSelSufijo);
         }
         return;
     }

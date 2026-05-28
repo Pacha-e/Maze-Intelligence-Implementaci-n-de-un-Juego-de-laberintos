@@ -12,17 +12,30 @@ class Juego {
     field int puntaje;
     field int movimientos;
     field boolean salir;
+    field String pnlClear, pnlVidas, pnlNivel, pnlPuntos;
+    field String txtGracias, txtPrompt;
+    field String txtVictoria, txtDerrota, txtPuntajeFinal, txtPromptMenu;
 
     constructor Juego new() {
         let gestorNiveles = GestorNiveles.new();
         let menu = MenuPrincipal.new();
-        let laberinto = null; 
+        let laberinto = null;
         let jugador = null;
         let enemigo = null;
         let estado = 0;
         let nivel = 1;
         let puntaje = 0;
         let salir = false;
+        let pnlClear = "                                                                ";
+        let pnlVidas = "Vidas: ";
+        let pnlNivel = " | Nivel: ";
+        let pnlPuntos = " | Puntos: ";
+        let txtGracias = "GRACIAS POR JUGAR";
+        let txtPrompt = "PRESIONA CUALQUIER TECLA PARA VOLVER AL MENU";
+        let txtVictoria = "!HAS ESCAPADO!";
+        let txtDerrota = "!CAPTURADO!";
+        let txtPuntajeFinal = "Puntaje Final: ";
+        let txtPromptMenu = "Presiona cualquier tecla para el menu";
         return this;
     }
 
@@ -54,9 +67,9 @@ class Juego {
     method void mostrarSalidaTemporal() {
         do Screen.clearScreen();
         do Output.moveCursor(10, 25);
-        do Output.printString("GRACIAS POR JUGAR");
+        do Output.printString(txtGracias);
         do Output.moveCursor(12, 9);
-        do Output.printString("PRESIONA CUALQUIER TECLA PARA VOLVER AL MENU");
+        do Output.printString(txtPrompt);
         do esperarTecla();
         return;
     }
@@ -189,22 +202,22 @@ class Juego {
 
     method void dibujarPanel() {
         do Output.moveCursor(0, 0);
-        do Output.printString("                                                                ");
+        do Output.printString(pnlClear);
         do Output.moveCursor(0, 0);
-        do Output.printString("Vidas: "); do Output.printInt(vidas);
-        do Output.printString(" | Nivel: "); do Output.printInt(nivel);
-        do Output.printString(" | Puntos: "); do Output.printInt(puntaje);
+        do Output.printString(pnlVidas); do Output.printInt(vidas);
+        do Output.printString(pnlNivel); do Output.printInt(nivel);
+        do Output.printString(pnlPuntos); do Output.printInt(puntaje);
         return;
     }
 
     method void mostrarVictoria() {
         do Screen.clearScreen();
         do Output.moveCursor(10, 25);
-        do Output.printString("!HAS ESCAPADO!");
+        do Output.printString(txtVictoria);
         do Output.moveCursor(12, 22);
-        do Output.printString("Puntaje Final: "); do Output.printInt(puntaje);
+        do Output.printString(txtPuntajeFinal); do Output.printInt(puntaje);
         do Output.moveCursor(15, 15);
-        do Output.printString("Presiona cualquier tecla para el menu");
+        do Output.printString(txtPromptMenu);
         do esperarTecla();
         let estado = 0;
         return;
@@ -213,11 +226,11 @@ class Juego {
     method void mostrarDerrota() {
         do Screen.clearScreen();
         do Output.moveCursor(10, 25);
-        do Output.printString("!CAPTURADO!");
+        do Output.printString(txtDerrota);
         do Output.moveCursor(12, 22);
-        do Output.printString("Puntaje Final: "); do Output.printInt(puntaje);
+        do Output.printString(txtPuntajeFinal); do Output.printInt(puntaje);
         do Output.moveCursor(15, 15);
-        do Output.printString("Presiona cualquier tecla para el menu");
+        do Output.printString(txtPromptMenu);
         do esperarTecla();
         let estado = 0;
         return;
