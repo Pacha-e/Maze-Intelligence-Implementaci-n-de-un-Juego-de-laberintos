@@ -21,7 +21,9 @@ class Juego {
         let menu = MenuPrincipal.new();
         let laberinto = null;
         let jugador = null;
-        let enemigo = null;
+        // Pre-alocado con capacidad maxima (13*31 = 403) para reusar entre niveles
+        // y evitar fragmentacion del heap (Memory.alloc) en JackOS.
+        let enemigo = Enemigo.new(403);
         let estado = 0;
         let nivel = 1;
         let puntaje = 0;
@@ -75,17 +77,17 @@ class Juego {
     }
 
     method void configurarVidas() {
-        if (modo = 1) { let vidas = 3; }
-        if (modo = 2) { let vidas = 2; }
+        if (modo = 1) { let vidas = 5; }
+        if (modo = 2) { let vidas = 3; }
         if (modo = 3) { let vidas = 1; }
         return;
     }
 
     method void iniciarNivel() {
-        do limpiarObjetos(); 
+        do limpiarObjetos();
         let laberinto = gestorNiveles.crearLaberinto(nivel);
         let jugador = Jugador.new(laberinto.getFilaInicio(), laberinto.getColInicio());
-        let enemigo = Enemigo.new(laberinto.getFilaEnemigoInicio(), laberinto.getColEnemigoInicio(), laberinto.getConteoCeldas());
+        do enemigo.fijar(laberinto.getFilaEnemigoInicio(), laberinto.getColEnemigoInicio());
         let movimientos = 0;
         let estado = 1;
         do renderizar();
@@ -156,8 +158,10 @@ class Juego {
                 }
             }
         }
+        // Modo Entrenamiento: enemigo solo avanza cada 3 movimientos.
+        // Si el contador NO es multiplo de 3, cancela el avance (retrocede).
         if (modo = 1) {
-            if (~esMultiplo(movimientos, 2)) {
+            if (~esMultiplo(movimientos, 3)) {
                 do enemigo.retroceder();
             }
         }
@@ -247,24 +251,27 @@ class Juego {
         return;
     }
 
+    /** Solo libera Laberinto y Jugador. Enemigo es persistente (alocado
+     *  una sola vez en el constructor) para evitar fragmentar el heap.
+     */
     method void limpiarObjetos() {
-        if (~(laberinto = null)) { 
-            do laberinto.eliminar(); 
+        if (~(laberinto = null)) {
+            do laberinto.eliminar();
             let laberinto = null;
         }
-        if (~(jugador = null)) { 
-            do jugador.eliminar(); 
+        if (~(jugador = null)) {
+            do jugador.eliminar();
             let jugador = null;
-        }
-        if (~(enemigo = null)) { 
-            do enemigo.eliminar(); 
-            let enemigo = null;
         }
         return;
     }
 
     method void eliminar() {
         do limpiarObjetos();
+        if (~(enemigo = null)) {
+            do enemigo.eliminar();
+            let enemigo = null;
+        }
         do gestorNiveles.eliminar();
         do menu.eliminar();
         do Memory.deAlloc(this);

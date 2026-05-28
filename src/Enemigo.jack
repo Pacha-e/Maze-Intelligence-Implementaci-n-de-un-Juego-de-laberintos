@@ -5,16 +5,22 @@ class Enemigo {
     field int capacidad;
     field Array colaF, colaC, primeraF, primeraC, visitado;
 
-    constructor Enemigo new(int f, int c, int max) {
-        let fila = f; let col = c;
-        let filaAnt = f; let colAnt = c;
+    constructor Enemigo new(int max) {
         let capacidad = max;
         let colaF = Array.new(capacidad);
         let colaC = Array.new(capacidad);
         let primeraF = Array.new(capacidad);
         let primeraC = Array.new(capacidad);
         let visitado = Array.new(capacidad);
+        let fila = 0; let col = 0;
+        let filaAnt = 0; let colAnt = 0;
         return this;
+    }
+
+    method void fijar(int f, int c) {
+        let fila = f; let col = c;
+        let filaAnt = f; let colAnt = c;
+        return;
     }
 
     method void moverHacia(Jugador jug, Laberinto lab) {
