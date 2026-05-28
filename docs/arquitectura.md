@@ -8,7 +8,7 @@ Implementar un juego de laberintos en Jack que sea facil de ejecutar, explicar y
 
 - El juego es **por turnos**: cada movimiento valido del jugador dispara la actualizacion de la IA y un redibujado del estado. Esto evita problemas de temporizacion en Jack y mantiene el comportamiento determinista.
 - El laberinto se guarda en un `Array` lineal. La posicion `(fila, columna)` se transforma con `fila * colsMax + columna`, expuesta por `Laberinto.getIndice`. El stride es `colsMax` (capacidad fisica), no `cols` (dimension logica del nivel actual), para que el mismo arreglo soporte mapas de distintos tamanos sin realocar.
-- El enemigo usa **Best-First Search (greedy)** con distancia Manhattan como heuristica para perseguir al jugador por caminos reales, respetando muros y bordes. La complejidad espacial es lineal en celdas exploradas y suficiente para mapas de 13x31.
+- El enemigo usa una **heuristica de distancia Manhattan combinada con conciencia de muros**: mantiene una frontera de celdas candidatas y en cada iteracion elige la celda con menor distancia Manhattan al jugador. La conciencia de muros viene del filtro previo `Laberinto.puedeEntrar` antes de agregar cualquier vecino: las celdas con muro o fuera del grid nunca entran en la frontera. Asi el enemigo rodea obstaculos sin reconstruir el camino completo y sin recorrer toda la grilla. Tope de 150 expansiones por turno para mantener fluidez en la VM.
 - En modo Experto entran dos enemigos simultaneos; el segundo marca la posicion del primero como muro temporal antes de planear su paso, evitando que ambos se fusionen y formando una pinza tactica.
 - Los modos cambian la dificultad con parametros simples: vidas, frecuencia de movimiento del enemigo, cantidad de enemigos y multiplicador de puntaje.
 - El renderizado usa figuras basicas de `Screen` para que funcione en el emulador sin recursos externos. El HUD usa `Output` de texto.
@@ -25,7 +25,7 @@ Implementar un juego de laberintos en Jack que sea facil de ejecutar, explicar y
 | `GestorNiveles` | Fabrica de mapas. Define 9 layouts unicos (3 modos x 3 niveles): muros, posiciones de inicio y galletas. |
 | `Laberinto` | Matriz del grid, `puedeEntrar`, pool de `Objetivo`, dibujado. |
 | `Jugador` | Posicion + intento de movimiento validado. |
-| `Enemigo` | Best-First Search con heuristica Manhattan + variante `moverEvitando` para el modo Experto. |
+| `Enemigo` | Heuristica Manhattan + conciencia de muros (filtra por `puedeEntrar`) + variante `moverEvitando` para el modo Experto. |
 | `Objetivo` | Galleta: fila/columna reutilizable via pool en `Laberinto`. |
 
 ## Estados del juego
@@ -62,9 +62,9 @@ Tecla -> Juego.manejarCicloJuego
         |       |
         |       +--> Aumenta puntaje + recoge galletas en la celda (swap-with-last)
         |       +--> Si conteoObjetivos == 0 -> avanzarNivel
-        |       +--> Enemigo.moverHacia (Best-First Search)
-        |       +--> Si modo == 3 -> Enemigo2.moverEvitando (Best-First con
-        |                            posicion de Enemigo1 como muro temporal)
+        |       +--> Enemigo.moverHacia (heuristica Manhattan + puedeEntrar)
+        |       +--> Si modo == 3 -> Enemigo2.moverEvitando (misma heuristica
+        |                            con posicion de Enemigo1 como muro temporal)
         |       +--> Modo Entrenamiento: si !esMultiplo(movs, 3) -> Enemigo.retroceder
         |       +--> Si colisiona con jugador -> perderVida
         |       +--> Render completo

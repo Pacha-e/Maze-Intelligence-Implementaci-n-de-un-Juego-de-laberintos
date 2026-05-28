@@ -1,6 +1,6 @@
 # Maze Intelligence
 
-Juego de laberintos desarrollado en Jack para Nand2Tetris. El jugador debe recolectar todas las galletas de cada nivel mientras uno o dos enemigos controlados por una IA informada (Best-First Search con heuristica Manhattan sobre el grid) lo persiguen por los caminos validos del mapa.
+Juego de laberintos desarrollado en Jack para Nand2Tetris. El jugador debe recolectar todas las galletas de cada nivel mientras uno o dos enemigos controlados por una IA con **heuristica Manhattan y conciencia de muros** lo persiguen por los caminos validos del mapa.
 
 ## Controles
 
@@ -55,7 +55,7 @@ El proyecto usa solo las clases estandar del sistema Jack: `Screen`, `Keyboard`,
 - `GestorNiveles.jack`: fabrica de mapas. Construye los 9 layouts (3 modos x 3 niveles) con muros, inicios y galletas.
 - `Laberinto.jack`: matriz del mapa. Centraliza muros, validacion de movimientos (`puedeEntrar`), almacenamiento de galletas y renderizado del grid. Pre-aloca un pool de `Objetivo` para evitar fragmentacion del heap.
 - `Jugador.jack`: posicion del heroe y movimiento validado contra el laberinto.
-- `Enemigo.jack`: IA informada con Best-First Search sobre el grid usando distancia Manhattan como heuristica. Modo Experto usa dos enemigos que se evitan entre si.
+- `Enemigo.jack`: IA con heuristica Manhattan y conciencia de muros. En cada paso elige de su frontera la celda con menor distancia Manhattan al jugador y solo expande vecinos transitables (filtrados por `Laberinto.puedeEntrar`). En modo Experto, el segundo enemigo recibe la posicion del primero y la marca como visitada para no fusionarse.
 - `Objetivo.jack`: representa una galleta (par fila/columna), reutilizable via el pool de `Laberinto`.
 
 ## Decisiones tecnicas clave
@@ -68,7 +68,7 @@ El proyecto usa solo las clases estandar del sistema Jack: `Screen`, `Keyboard`,
 ## Criterios cubiertos (segun rubrica)
 
 - **Correctitud logica:** movimiento valido en el grid, deteccion de colisiones contra muros y bordes, captura del jugador, recoleccion de galletas, fin de nivel al recolectar todas, fin de juego al perder todas las vidas.
-- **IA del enemigo:** Best-First Search sobre el grid priorizando la menor distancia Manhattan al jugador. Permite rodear muros sin la complejidad espacial de un BFS completo. En modo Experto, el segundo enemigo marca la posicion del primero como muro temporal para no fusionarse, formando una pinza tactica.
+- **IA del enemigo:** heuristica informada por distancia Manhattan combinada con conciencia de muros. La frontera nunca recibe celdas con muro ni fuera de bordes (filtro previo via `puedeEntrar`), y entre las que quedan se elige siempre la mas cercana al jugador. Esto produce persecucion que rodea obstaculos sin recorrer toda la grilla. En modo Experto, el segundo enemigo marca la posicion del primero como muro temporal para no fusionarse, formando una pinza tactica.
 - **Manejo de estados:** menu (0), partida (1), victoria (2), derrota (3). Transiciones controladas exclusivamente desde `Juego`.
 - **Validacion de movimientos:** toda posicion pasa por `Laberinto.puedeEntrar`, que cubre bordes, muros y posiciones invalidas.
 - **Modularidad:** ocho clases con responsabilidades claras y bajo acoplamiento.

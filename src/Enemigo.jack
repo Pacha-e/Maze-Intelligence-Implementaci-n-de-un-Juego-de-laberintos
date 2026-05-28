@@ -1,13 +1,24 @@
-/** IA avanzada con Best-First Search (Greedy) y Heuristica Manhattan.
- *  Cumple estrictamente con el enunciado: utiliza una heuristica informada
- *  para explorar el mapa y encontrar una ruta optima rodeando muros.
+/** IA del enemigo: heuristica Manhattan con conciencia de muros.
+ *
+ *  El enemigo no usa BFS ni A*. Mantiene una frontera de celdas candidatas
+ *  y en cada iteracion elige la celda con menor distancia Manhattan al
+ *  jugador. La "conciencia de muros" viene del chequeo lab.puedeEntrar
+ *  antes de agregar cualquier vecino a la frontera: las celdas con muro
+ *  o fuera de bordes nunca entran. Asi el enemigo rodea obstaculos sin
+ *  necesidad de reconstruir el camino completo.
+ *
+ *  Variante moverEvitando(ef, ec): en modo Experto, el segundo enemigo
+ *  recibe la posicion del primero (ef, ec) y la marca como visitada antes
+ *  de empezar; el segundo enemigo entonces evita esa celda al planear su
+ *  paso, lo que evita que ambos se fusionen y produce una pinza tactica.
+ *  Sentinela (-1, -1) significa "sin companero".
  */
 class Enemigo {
     field int fila, col;
     field int filaAnt, colAnt;
     field int capacidad;
     
-    // Estructuras para el algoritmo de busqueda (Best-First)
+    // Estructuras de la heuristica Manhattan con conciencia de muros
     field Array colaF, colaC;       // Frontera de exploracion (Filas y Columnas)
     field Array primeraF, primeraC; // Rastro del primer movimiento realizado
     field Array visitado;           // Registro para evitar ciclos y muros
@@ -37,8 +48,10 @@ class Enemigo {
         return;
     }
 
-    /** Algoritmo Best-First Search: Explora la grilla priorizando la
-     *  menor distancia Manhattan al objetivo. Esto permite rodear muros.
+    /** Heuristica Manhattan con conciencia de muros: en cada iteracion
+     *  selecciona de la frontera la celda con menor distancia Manhattan
+     *  al jugador, y solo expande vecinos que pasen lab.puedeEntrar.
+     *  Esto rodea muros y bordes sin construir el camino completo.
      */
     method void moverEvitando(Jugador jug, Laberinto lab, int ef, int ec) {
         var int frente, final, fAct, cAct, fObj, cObj, mejorI, i;
@@ -66,10 +79,10 @@ class Enemigo {
         }
         let final = final + 1;
 
-        // 3. Bucle de Busqueda Informada
-        while ((frente < final) & (frente < 150)) { // Limite de pasos para fluidez
-            
-            // --- Logica Best-First: Encontrar el mejor nodo en la frontera ---
+        // 3. Bucle principal: tope de 150 expansiones para mantener fluidez en la VM
+        while ((frente < final) & (frente < 150)) {
+
+            // Selecciona el nodo de la frontera con menor distancia Manhattan al jugador
             let mejorI = frente;
             let dMin = 10000;
             let i = frente;

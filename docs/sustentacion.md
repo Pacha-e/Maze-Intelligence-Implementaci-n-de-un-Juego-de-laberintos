@@ -2,36 +2,40 @@
 
 ## Idea central
 
-El juego representa el laberinto como una matriz. Cada celda puede ser camino o muro; ademas, sobre algunas celdas se colocan galletas (objetivos) que el jugador debe recolectar. Por cada movimiento valido del jugador, el o los enemigos recalculan con Best-First Search un paso hacia el jugador, respetando muros y bordes.
+El juego representa el laberinto como una matriz. Cada celda puede ser camino o muro; ademas, sobre algunas celdas se colocan galletas (objetivos) que el jugador debe recolectar. Por cada movimiento valido del jugador, el o los enemigos recalculan su siguiente paso usando una heuristica de distancia Manhattan combinada con conciencia de muros (filtro previo por `Laberinto.puedeEntrar`).
 
 ## Puntos tecnicos importantes
 
 - `Laberinto` centraliza la matriz, los muros, las galletas (pool de 30 `Objetivo`) y la validacion de posiciones (`puedeEntrar`).
 - `Jugador` solo conoce su posicion y delega la validacion al laberinto.
-- `Enemigo` usa **Best-First Search (greedy)** con distancia Manhattan como heuristica para hallar el primer paso de una ruta razonable hasta el jugador. El metodo `moverEvitando(jug, lab, ef, ec)` permite pasar la posicion del companero (modo Experto) para marcarla como muro temporal y evitar fusiones.
+- `Enemigo` usa una **heuristica Manhattan con conciencia de muros**. Mantiene una frontera de celdas candidatas, en cada iteracion elige la celda con menor distancia Manhattan al jugador, y al expandir vecinos descarta los que `Laberinto.puedeEntrar` rechace (muros y bordes). El metodo `moverEvitando(jug, lab, ef, ec)` permite pasar la posicion del companero (modo Experto) para marcarla como muro temporal y evitar fusiones.
 - `Juego` controla estados, dificultad, vidas, puntaje y transiciones. Pre-aloca **una sola vez** `Laberinto`, `Jugador` y los dos `Enemigo` para evitar la fragmentacion del heap del JackOS entre niveles.
 - `GestorNiveles` aisla la generacion de mapas: 9 layouts (3 modos x 3 niveles), cada uno con dimensiones, muros, posiciones de inicio y galletas distintas.
 - Toda clase con memoria dinamica expone `eliminar()` para liberar el heap al cerrar; los reusos intermedios pasan por `fijar(f, c)` sobre el objeto existente, sin alocar.
 - El juego **evita movimiento aleatorio**: el enemigo siempre decide con base en el estado actual del tablero, lo que cumple el criterio de "estrategia clara y eficiente" de la rubrica.
 
-## Como explicar la IA (Best-First Search)
+## Como explicar la IA (heuristica Manhattan con conciencia de muros)
 
-El metodo clave es `Enemigo.moverEvitando(jug, lab, ef, ec)` (`moverHacia` es un wrapper que pasa `-1, -1` cuando no hay companero):
+El metodo clave es `Enemigo.moverEvitando(jug, lab, ef, ec)` (`moverHacia` es un wrapper que pasa `-1, -1` cuando no hay companero). Idea en una frase: **la frontera nunca contiene celdas inalcanzables, y entre las alcanzables siempre se elige la mas cercana al jugador segun distancia Manhattan**.
+
+Pasos:
 
 1. Limpia la marca de visitados y guarda la posicion del enemigo en la frontera.
-2. Si hay companero (modo Experto), marca su celda como visitada para que el segundo enemigo no la elija.
+2. Si hay companero (modo Experto), marca su celda como visitada para que el segundo enemigo no la elija (sentinela `(-1, -1)` significa "sin companero").
 3. Mientras la frontera no este vacia (y hasta un tope de 150 expansiones para mantener la fluidez del VM):
-   - Selecciona el nodo de la frontera con **menor distancia Manhattan al jugador** y lo intercambia al frente (asi el siguiente `pop` lo procesa).
-   - Si la celda extraida coincide con el jugador, recupera el primer paso registrado y mueve al enemigo a esa direccion.
-   - Si no, expande sus 4 vecinos transitables y no visitados.
-4. Para cada celda agregada, guarda **cual fue el primer paso** desde el origen: si el padre es el origen, el primer paso es el vecino mismo; si no, hereda el primer paso del padre.
-5. Si la frontera se vacia o se agota el tope sin alcanzar al jugador, el enemigo mantiene su posicion (no se mueve a una celda peor que la actual).
+   - **Heuristica Manhattan**: recorre la frontera, calcula `|f - fJugador| + |c - cJugador|` para cada celda y selecciona la de menor valor. La intercambia con el frente para procesarla.
+   - Si esa celda coincide con el jugador, recupera el primer paso registrado y mueve al enemigo a esa direccion.
+   - Si no, expande sus 4 vecinos.
+4. **Conciencia de muros**: cada vecino candidato pasa por `Laberinto.puedeEntrar(f, c)`. Esto rechaza muros (`celdas[idx] = 1`) y posiciones fuera de bordes. Solo los vecinos transitables y no visitados entran en la frontera. Por construccion, la frontera nunca contiene una celda a la que el enemigo no pueda llegar.
+5. Para cada celda agregada, guarda **cual fue el primer paso** desde el origen: si el padre es el origen, el primer paso es el vecino mismo; si no, hereda el primer paso del padre. Esto permite que cuando la heuristica llega al jugador, el enemigo sepa que direccion tomar AHORA, no el camino completo.
+6. Si la frontera se vacia o se agota el tope sin alcanzar al jugador, el enemigo mantiene su posicion (no se mueve a una celda peor que la actual).
 
-### Por que Best-First y no BFS puro
+### Por que esta heuristica y no una busqueda exhaustiva
 
-- **Espacio**: BFS expande por niveles y, en un peor caso, visita toda la grilla (403 nodos). Best-First explora primero los nodos prometedores, llegando al jugador con muchos menos pasos en mapas abiertos.
-- **Simplicidad en Jack**: una cola FIFO real requiere desplazar el indice de cabeza; Best-First trabaja sobre la misma frontera con un swap del minimo al frente.
-- **Suficiente para la rubrica**: Best-First con Manhattan rodea muros locales y reproduce el comportamiento persecutor pedido. Cuando no encuentra ruta en 150 expansiones, simplemente no avanza ese turno, lo cual es interpretable y nunca produce un movimiento ilegal.
+- **Cumple el enunciado**: la rubrica pide una IA con "estrategia clara y eficiente, no aleatoria". La distancia Manhattan es la heuristica admisible natural en una grilla con movimientos en 4 direcciones, y el filtro por muros garantiza movimientos legales.
+- **Espacio acotado**: una BFS exhaustiva visitaria en peor caso todas las celdas alcanzables (hasta 403 en el mapa maximo). La heuristica selectiva explora primero los nodos prometedores y suele llegar al jugador con muchas menos expansiones.
+- **Simplicidad en Jack**: no requiere una cola FIFO con desplazamiento de cabeza. La frontera vive en arreglos pre-alocados de tamano fijo y la seleccion del mejor nodo se hace con un swap al frente.
+- **Robustez visual**: cuando no hay camino claro en 150 expansiones (mapas patologicos o jugador rodeado), el enemigo se queda quieto en lugar de hacer un movimiento ilegal o aleatorio.
 
 ### Diagrama del algoritmo
 
@@ -93,17 +97,17 @@ E . . .
 . . . J
 ```
 
-Iteraciones de Best-First (`d` = distancia Manhattan al jugador `(3,3)`):
+Iteraciones (`d` = distancia Manhattan al jugador `(3,3)`):
 
-1. Frontera: `[(0,0)]` con `d=6`. Pop `(0,0)`, no es `J`. Expande `(0,1) d=5` y `(1,0) d=5`.
-2. Frontera: `[(0,1) d=5, (1,0) d=5]`. Empate; toma el primero por orden. Pop `(0,1)`. Expande `(0,2) d=4`.
+1. Frontera: `[(0,0)]` con `d=6`. Pop `(0,0)`, no es `J`. Expande sus vecinos pasando `puedeEntrar`: `(0,1) d=5` y `(1,0) d=5` entran. Las celdas `(-1,0)` y `(0,-1)` son rechazadas por estar fuera del grid.
+2. Frontera: `[(0,1), (1,0)]`. Empate en `d=5`; toma el primero por orden. Pop `(0,1)`. Expande `(0,2) d=4`. La celda `(1,1)` seria valida geometricamente pero `puedeEntrar` la rechaza por ser muro.
 3. Frontera: `[(1,0) d=5, (0,2) d=4]`. Min = `(0,2)`. Swap al frente, pop. Expande `(0,3) d=3`.
 4. Min = `(0,3) d=3`. Pop. Expande `(1,3) d=2`.
 5. Min = `(1,3) d=2`. Pop. Expande `(2,3) d=1`.
 6. Min = `(2,3) d=1`. Pop. Expande `(3,3) d=0`.
 7. Min = `(3,3) d=0`. Pop. **Coincide con el jugador.** Primer paso registrado: `(0,1)`.
 
-Resultado: el enemigo se mueve de `(0,0)` a `(0,1)`, primer paso de la ruta por arriba. Best-First llego al jugador en 6 expansiones; BFS puro habria explorado tambien `(1,0)`, `(2,0)` y `(3,0)` (4 expansiones extra) antes de cerrar el camino.
+Resultado: el enemigo se mueve de `(0,0)` a `(0,1)`, primer paso de la ruta por arriba. La heuristica llego al jugador en 6 expansiones; una busqueda exhaustiva por niveles habria explorado tambien `(1,0)`, `(2,0)` y `(3,0)` (4 expansiones extra) antes de cerrar el camino, y la conciencia de muros mantuvo a `(1,1)` y `(2,1)` fuera de la frontera todo el tiempo.
 
 ## Mejoras agregadas sobre el alcance minimo
 
