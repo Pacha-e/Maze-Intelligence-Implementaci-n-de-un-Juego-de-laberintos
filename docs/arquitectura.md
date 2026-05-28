@@ -7,11 +7,13 @@ Implementar un juego de laberintos en Jack que sea facil de ejecutar, explicar y
 ## Decisiones principales
 
 - El juego es **por turnos**: cada movimiento valido del jugador dispara la actualizacion de la IA y un redibujado del estado. Esto evita problemas de temporizacion en Jack y mantiene el comportamiento determinista.
-- El laberinto se guarda en un `Array` lineal. La posicion `(fila, columna)` se transforma con `fila * cols + columna`, expuesta por `Laberinto.getIndice`.
-- El enemigo usa **BFS** para perseguir al jugador por caminos reales, respetando muros y bordes. Si la cola se desborda o no hay ruta, cae a un **respaldo voraz** por distancia Manhattan.
-- Los modos cambian la dificultad con parametros simples: vidas, frecuencia de movimiento del enemigo y multiplicador de puntaje.
+- El laberinto se guarda en un `Array` lineal. La posicion `(fila, columna)` se transforma con `fila * colsMax + columna`, expuesta por `Laberinto.getIndice`. El stride es `colsMax` (capacidad fisica), no `cols` (dimension logica del nivel actual), para que el mismo arreglo soporte mapas de distintos tamanos sin realocar.
+- El enemigo usa **Best-First Search (greedy)** con distancia Manhattan como heuristica para perseguir al jugador por caminos reales, respetando muros y bordes. La complejidad espacial es lineal en celdas exploradas y suficiente para mapas de 13x31.
+- En modo Experto entran dos enemigos simultaneos; el segundo marca la posicion del primero como muro temporal antes de planear su paso, evitando que ambos se fusionen y formando una pinza tactica.
+- Los modos cambian la dificultad con parametros simples: vidas, frecuencia de movimiento del enemigo, cantidad de enemigos y multiplicador de puntaje.
 - El renderizado usa figuras basicas de `Screen` para que funcione en el emulador sin recursos externos. El HUD usa `Output` de texto.
-- Toda clase con memoria dinamica (`Array` u objetos) expone `eliminar()` para liberar el heap antes de salir o cambiar de nivel.
+- **Gestion de heap por pool persistente**: todas las instancias dinamicas (`Laberinto`, `Jugador`, los dos `Enemigo`, los 30 `Objetivo`) se alocan una sola vez al iniciar `Juego`, con capacidad maxima (13x31). Los cambios de nivel y reinicios tras perder vida solo llaman `fijar(f, c)` sobre los objetos existentes, sin disparar `Memory.alloc` / `Memory.deAlloc`. Esto evita la fragmentacion del heap del JackOS que producia un overflow al cambiar de modo varias veces.
+- Cada clase con memoria dinamica expone `eliminar()` para liberar todo el heap al cerrar el juego (camino final `Main.main` -> `Juego.eliminar`).
 
 ## Mapa de clases (`src/`)
 
@@ -20,11 +22,11 @@ Implementar un juego de laberintos en Jack que sea facil de ejecutar, explicar y
 | `Main` | Punto de entrada. Construye y libera `Juego`. |
 | `Juego` | Bucle principal, estados, vidas, puntaje, transiciones entre niveles. |
 | `MenuPrincipal` | Pantalla inicial, navegacion por teclado, seleccion de modo. |
-| `GestorNiveles` | Fabrica de `Laberinto` por nivel. Define muros, inicios y galletas. |
-| `Laberinto` | Matriz del grid, `puedeEntrar`, almacenamiento de `Objetivo`, dibujado. |
+| `GestorNiveles` | Fabrica de mapas. Define 9 layouts unicos (3 modos x 3 niveles): muros, posiciones de inicio y galletas. |
+| `Laberinto` | Matriz del grid, `puedeEntrar`, pool de `Objetivo`, dibujado. |
 | `Jugador` | Posicion + intento de movimiento validado. |
-| `Enemigo` | BFS + respaldo voraz, dibujado, retroceder (modo lento). |
-| `Objetivo` | Galleta: fila/columna con ciclo de vida independiente. |
+| `Enemigo` | Best-First Search con heuristica Manhattan + variante `moverEvitando` para el modo Experto. |
+| `Objetivo` | Galleta: fila/columna reutilizable via pool en `Laberinto`. |
 
 ## Estados del juego
 
@@ -42,7 +44,7 @@ Valores del arreglo `celdas`:
 - `0`: camino libre.
 - `1`: muro.
 
-Las galletas (`Objetivo`) se almacenan aparte en un arreglo dinamico `objetivos`. Cuando el jugador entra en una celda con galleta, esta se elimina por **desplazamiento de punteros** (no por nulificacion), evitando huecos en el arreglo y fugas de memoria.
+Las galletas (`Objetivo`) se almacenan aparte en un arreglo dinamico `objetivos` de capacidad fija (30 slots). Cuando el jugador entra en una celda con galleta, se elimina por **swap-with-last**: se intercambia el slot recolectado con el ultimo activo y se decrementa el conteo. Esto preserva el pool sin nulificar punteros y sin huecos en el arreglo.
 
 Toda validacion de movimiento pasa por `Laberinto.puedeEntrar(f, c)`, lo que centraliza:
 
@@ -58,13 +60,14 @@ Tecla -> Juego.manejarCicloJuego
         +--> Jugador.intentarMover (consulta Laberinto.puedeEntrar)
         |       movido = true?
         |       |
-        |       +--> Aumenta puntaje + recoge galletas en la celda
+        |       +--> Aumenta puntaje + recoge galletas en la celda (swap-with-last)
         |       +--> Si conteoObjetivos == 0 -> avanzarNivel
-        |       +--> Enemigo.moverHacia (BFS + voraz)
-        |               |
-        |               +--> Si colisiona con jugador -> perderVida
-        |               |
-        |               +--> Render completo
+        |       +--> Enemigo.moverHacia (Best-First Search)
+        |       +--> Si modo == 3 -> Enemigo2.moverEvitando (Best-First con
+        |                            posicion de Enemigo1 como muro temporal)
+        |       +--> Modo Entrenamiento: si !esMultiplo(movs, 3) -> Enemigo.retroceder
+        |       +--> Si colisiona con jugador -> perderVida
+        |       +--> Render completo
         |
         +--> Sys.wait(5)  // estabilidad VM
 ```
@@ -73,5 +76,17 @@ Tecla -> Juego.manejarCicloJuego
 
 - Celdas de 16x16 px, dibujadas como cuadrados de 14x14 (deja 2 px de gap entre celdas).
 - Origen del grid: `(10, 42)`. Deja la fila 0 de `Output` libre para el HUD.
-- Limite practico: hasta 30 columnas (`10 + 29*16 + 13 = 487 < 511`) y hasta 12 filas (`42 + 11*16 + 13 = 231 < 255`).
-- Niveles 1 y 2 son `10 x 12` y `10 x 16`; nivel 3 expande a `11 x 24` para aprovechar la pantalla.
+- Limite practico: hasta 31 columnas (`10 + 30*16 + 13 = 503 < 511`) y hasta 13 filas (`42 + 12*16 + 13 = 247 < 255`).
+- Niveles: se usan configuraciones de `11x27`, `13x29` y `13x31` para maximizar la inmersion visual en la pantalla de la VM de Nand2Tetris. El pool fisico siempre es 13x31 = 403 celdas.
+
+## Codigos de tecla (Keyboard.keyPressed)
+
+| Codigo | Tecla | Uso |
+|---|---|---|
+| 65 / 130 | A / flecha izquierda | mover izquierda |
+| 87 / 131 | W / flecha arriba | mover arriba (y navegar menu) |
+| 68 / 132 | D / flecha derecha | mover derecha |
+| 83 / 133 | S / flecha abajo | mover abajo (y navegar menu) |
+| 128 | Enter | confirmar opcion de menu |
+| 81 / 113 | Q / q | salir / volver al menu |
+| 49..51 | 1, 2, 3 | seleccion directa de modo |

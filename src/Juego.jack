@@ -1,8 +1,24 @@
-/** Coordina la logica del juego, estados y transiciones de nivel. */
+/** Coordina la logica del juego, estados y transiciones de nivel.
+ *
+ *  Estados (campo `estado`):
+ *    0 = menu  |  1 = partida  |  2 = victoria  |  3 = derrota
+ *
+ *  Codigos de tecla Jack relevantes (Keyboard.keyPressed):
+ *    81  = 'Q'  (salir / volver al menu)
+ *    128 = Enter
+ *    130 = flecha izquierda    |  131 = flecha arriba
+ *    132 = flecha derecha      |  133 = flecha abajo
+ *    65 = 'A'   |  68 = 'D'   |  83 = 'S'   |  87 = 'W'
+ *
+ *  Dimensiones maximas pre-alocadas: 13 filas x 31 columnas = 403 celdas.
+ *  Toda la gestion de memoria es pool persistente para evitar fragmentar el
+ *  heap del JackOS al cambiar de nivel o reiniciar tras perder una vida.
+ */
 class Juego {
     field Laberinto laberinto;
     field Jugador jugador;
     field Enemigo enemigo;
+    field Enemigo enemigo2; // Nuevo: Segundo enemigo para Modo Experto
     field GestorNiveles gestorNiveles;
     field MenuPrincipal menu;
     field int estado; // 0: Menu, 1: Juego, 2: Gano, 3: Perdio
@@ -19,11 +35,14 @@ class Juego {
     constructor Juego new() {
         let gestorNiveles = GestorNiveles.new();
         let menu = MenuPrincipal.new();
-        let laberinto = null;
-        let jugador = null;
-        // Pre-alocado con capacidad maxima (13*31 = 403) para reusar entre niveles
-        // y evitar fragmentacion del heap (Memory.alloc) en JackOS.
+        // Todos los objetos del juego se pre-alocan UNA sola vez con
+        // capacidad maxima (grilla 13x31 = 403 celdas). Esto elimina los
+        // ciclos Memory.alloc/deAlloc entre niveles, evitando la
+        // fragmentacion del heap del JackOS que causa overflows.
+        let laberinto = Laberinto.new(13, 31);
+        let jugador = Jugador.new();
         let enemigo = Enemigo.new(403);
+        let enemigo2 = Enemigo.new(403); // Segundo enemigo persistente
         let estado = 0;
         let nivel = 1;
         let puntaje = 0;
@@ -84,10 +103,11 @@ class Juego {
     }
 
     method void iniciarNivel() {
-        do limpiarObjetos();
-        let laberinto = gestorNiveles.crearLaberinto(nivel);
-        let jugador = Jugador.new(laberinto.getFilaInicio(), laberinto.getColInicio());
+        do gestorNiveles.poblarLaberinto(laberinto, modo, nivel);
+        do jugador.fijar(laberinto.getFilaInicio(), laberinto.getColInicio());
         do enemigo.fijar(laberinto.getFilaEnemigoInicio(), laberinto.getColEnemigoInicio());
+        // Enemigo 2 se posiciona siempre, pero solo se usa en modo 3.
+        do enemigo2.fijar(laberinto.getFilaEnemigo2Inicio(), laberinto.getColEnemigo2Inicio());
         let movimientos = 0;
         let estado = 1;
         do renderizar();
@@ -97,22 +117,22 @@ class Juego {
     method void manejarCicloJuego() {
         var int tecla;
         var int df, dc;
-        var boolean movido;
-        var int i, fr, fc;
+        var boolean movido, choque;
+        var int i, fr, fc, jf, jc;
 
         let tecla = Keyboard.keyPressed();
-        if (tecla = 81) { 
+        if (tecla = 81) { // Q -> volver al menu
             do esperarLiberacion();
-            do limpiarObjetos(); 
-            let estado = 0; 
-            return; 
+            let estado = 0;
+            return;
         }
 
+        // Mapeo de teclas a delta (df = fila, dc = columna)
         let df = 0; let dc = 0;
-        if ((tecla = 130) | (tecla = 65)) { let dc = -1; }
-        if ((tecla = 131) | (tecla = 87)) { let df = -1; }
-        if ((tecla = 132) | (tecla = 68)) { let dc = 1; }
-        if ((tecla = 133) | (tecla = 83)) { let df = 1; }
+        if ((tecla = 130) | (tecla = 65)) { let dc = -1; } // izquierda / A
+        if ((tecla = 131) | (tecla = 87)) { let df = -1; } // arriba    / W
+        if ((tecla = 132) | (tecla = 68)) { let dc = 1; }  // derecha   / D
+        if ((tecla = 133) | (tecla = 83)) { let df = 1; }  // abajo     / S
 
         if (~(df = 0) | ~(dc = 0)) {
             let movido = jugador.intentarMover(df, dc, laberinto);
@@ -138,7 +158,14 @@ class Juego {
                 }
 
                 do moverEnemigo();
-                if (enemigo.estaEn(jugador.getFila(), jugador.getCol())) {
+                // Colision: enemigo1 siempre, enemigo2 solo en modo Experto.
+                let jf = jugador.getFila();
+                let jc = jugador.getCol();
+                let choque = enemigo.estaEn(jf, jc);
+                if (~choque) {
+                    if (modo = 3) { let choque = enemigo2.estaEn(jf, jc); }
+                }
+                if (choque) {
                     do perderVida();
                 } else {
                     do renderizar();
@@ -152,14 +179,11 @@ class Juego {
     method void moverEnemigo() {
         do enemigo.moverHacia(jugador, laberinto);
         if (modo = 3) {
-            if (esMultiplo(movimientos, 3)) {
-                if (~enemigo.estaEn(jugador.getFila(), jugador.getCol())) {
-                    do enemigo.moverHacia(jugador, laberinto);
-                }
-            }
+            // Modo Experto: El segundo enemigo evita la posicion actual del primero
+            // para no fusionarse y crear una pinza tactica.
+            do enemigo2.moverEvitando(jugador, laberinto, enemigo.getFila(), enemigo.getCol());
         }
         // Modo Entrenamiento: enemigo solo avanza cada 3 movimientos.
-        // Si el contador NO es multiplo de 3, cancela el avance (retrocede).
         if (modo = 1) {
             if (~esMultiplo(movimientos, 3)) {
                 do enemigo.retroceder();
@@ -170,6 +194,7 @@ class Juego {
 
     method boolean esMultiplo(int v, int d) {
         var int q;
+        if (v = 0) { return false; }
         let q = v / d;
         return v = (q * d);
     }
@@ -187,6 +212,8 @@ class Juego {
 
     method void perderVida() {
         let vidas = vidas - 1;
+        do renderizar(); 
+        do Sys.wait(1000); 
         if (vidas < 1) {
             let estado = 3;
         } else {
@@ -200,6 +227,7 @@ class Juego {
         do laberinto.dibujar();
         do jugador.dibujar(laberinto);
         do enemigo.dibujar(laberinto);
+        if (modo = 3) { do enemigo2.dibujar(laberinto); }
         do dibujarPanel();
         return;
     }
@@ -251,29 +279,23 @@ class Juego {
         return;
     }
 
-    /** Solo libera Laberinto y Jugador. Enemigo es persistente (alocado
-     *  una sola vez en el constructor) para evitar fragmentar el heap.
-     */
-    method void limpiarObjetos() {
-        if (~(laberinto = null)) {
-            do laberinto.eliminar();
-            let laberinto = null;
-        }
-        if (~(jugador = null)) {
-            do jugador.eliminar();
-            let jugador = null;
-        }
-        return;
-    }
-
     method void eliminar() {
-        do limpiarObjetos();
-        if (~(enemigo = null)) {
-            do enemigo.eliminar();
-            let enemigo = null;
-        }
+        if (~(laberinto = null)) { do laberinto.eliminar(); }
+        if (~(jugador = null)) { do jugador.eliminar(); }
+        if (~(enemigo = null)) { do enemigo.eliminar(); }
+        if (~(enemigo2 = null)) { do enemigo2.eliminar(); }
         do gestorNiveles.eliminar();
         do menu.eliminar();
+        do pnlClear.dispose();
+        do pnlVidas.dispose();
+        do pnlNivel.dispose();
+        do pnlPuntos.dispose();
+        do txtGracias.dispose();
+        do txtPrompt.dispose();
+        do txtVictoria.dispose();
+        do txtDerrota.dispose();
+        do txtPuntajeFinal.dispose();
+        do txtPromptMenu.dispose();
         do Memory.deAlloc(this);
         return;
     }

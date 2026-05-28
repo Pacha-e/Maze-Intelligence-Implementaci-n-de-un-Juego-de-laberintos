@@ -1,28 +1,59 @@
-/** Estructura del laberinto y gestion de objetivos. */
+/** Estructura del laberinto y gestion de objetivos.
+ *  Pre-alocado con dimensiones MAXIMAS (filasMax x colsMax) y un pool de
+ *  Objetivos. reiniciar(f, c) cambia las dimensiones logicas y vacia el
+ *  estado sin disparar Memory.alloc/deAlloc -- evita la fragmentacion del
+ *  heap JackOS entre niveles y muertes.
+ */
 class Laberinto {
     field Array celdas;
     field int filas, cols;
+    field int filasMax, colsMax;
     field int filaInicio, colInicio;
     field int filaEnemigoInicio, colEnemigoInicio;
+    field int filaEnemigo2Inicio, colEnemigo2Inicio;
     field Array objetivos;
     field int conteoObjetivos;
     field int capacidadObjetivos;
 
-    constructor Laberinto new(int f, int c) {
-        let filas = f;
-        let cols = c;
-        let celdas = Array.new(filas * cols);
+    constructor Laberinto new(int maxF, int maxC) {
+        var int i;
+        let filasMax = maxF;
+        let colsMax = maxC;
+        let filas = maxF;
+        let cols = maxC;
+        let celdas = Array.new(maxF * maxC);
         let capacidadObjetivos = 30;
         let objetivos = Array.new(capacidadObjetivos);
+        // Pool de Objetivos pre-alocado: nunca se desaloca por nivel.
+        let i = 0;
+        while (i < capacidadObjetivos) {
+            let objetivos[i] = Objetivo.new(0, 0);
+            let i = i + 1;
+        }
         let conteoObjetivos = 0;
         do vaciar();
         return this;
     }
 
+    /** Reinicia el laberinto con nuevas dimensiones logicas, sin alocar. */
+    method void reiniciar(int f, int c) {
+        let filas = f;
+        let cols = c;
+        let conteoObjetivos = 0;
+        let filaInicio = 0;
+        let colInicio = 0;
+        let filaEnemigoInicio = 0;
+        let colEnemigoInicio = 0;
+        let filaEnemigo2Inicio = 0;
+        let colEnemigo2Inicio = 0;
+        do vaciar();
+        return;
+    }
+
     method void vaciar() {
         var int i, total;
         let i = 0;
-        let total = filas * cols;
+        let total = filasMax * colsMax;
         while (i < total) {
             let celdas[i] = 0;
             let i = i + 1;
@@ -68,31 +99,38 @@ class Laberinto {
     }
 
     method void setMuro(int f, int c) {
-        let celdas[(f * cols) + c] = 1;
+        let celdas[(f * colsMax) + c] = 1;
         return;
     }
 
+    /** Borra un muro en la posicion especificada. */
+    method void reiniciarCelda(int f, int c) {
+        let celdas[(f * colsMax) + c] = 0;
+        return;
+    }
+
+    /** Reposiciona un Objetivo del pool sin alocar. */
     method void setObjetivo(int f, int c) {
+        var Objetivo obj;
         if (conteoObjetivos < capacidadObjetivos) {
-            let objetivos[conteoObjetivos] = Objetivo.new(f, c);
+            let obj = objetivos[conteoObjetivos];
+            do obj.fijar(f, c);
             let conteoObjetivos = conteoObjetivos + 1;
         }
         return;
     }
 
+    /** Elimina un objetivo logicamente: swap-with-last preserva el pool. */
     method void removerObjetivo(int f, int c) {
         var int i;
-        var Objetivo obj;
+        var Objetivo obj, tmp;
         let i = 0;
         while (i < conteoObjetivos) {
             let obj = objetivos[i];
             if ((obj.getFila() = f) & (obj.getCol() = c)) {
-                do obj.eliminar();
-                while (i < (conteoObjetivos - 1)) {
-                    let objetivos[i] = objetivos[i + 1];
-                    let i = i + 1;
-                }
-                let objetivos[conteoObjetivos - 1] = null; 
+                let tmp = objetivos[conteoObjetivos - 1];
+                let objetivos[conteoObjetivos - 1] = obj;
+                let objetivos[i] = tmp;
                 let conteoObjetivos = conteoObjetivos - 1;
                 return;
             }
@@ -103,7 +141,7 @@ class Laberinto {
 
     method boolean puedeEntrar(int f, int c) {
         if ((f < 0) | (c < 0) | (~(f < filas)) | (~(c < cols))) { return false; }
-        return ~(celdas[(f * cols) + c] = 1);
+        return ~(celdas[(f * colsMax) + c] = 1);
     }
 
     method void dibujar() {
@@ -113,7 +151,7 @@ class Laberinto {
         while (f < filas) {
             let c = 0; let x = 10;
             while (c < cols) {
-                if (celdas[(f * cols) + c] = 1) {
+                if (celdas[(f * colsMax) + c] = 1) {
                     do Screen.setColor(true);
                     do Screen.drawRectangle(x, y, x + 13, y + 13);
                 }
@@ -139,25 +177,28 @@ class Laberinto {
     method int getColInicio() { return colInicio; }
     method int getFilaEnemigoInicio() { return filaEnemigoInicio; }
     method int getColEnemigoInicio() { return colEnemigoInicio; }
+    method int getFilaEnemigo2Inicio() { return filaEnemigo2Inicio; }
+    method int getColEnemigo2Inicio() { return colEnemigo2Inicio; }
     method int getConteoCeldas() { return filas * cols; }
     method int getConteoObjetivos() { return conteoObjetivos; }
     method int getFilaObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getFila(); }
     method int getColObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getCol(); }
-    method int getIndice(int f, int c) { return (f * cols) + c; }
+    method int getIndice(int f, int c) { return (f * colsMax) + c; }
     method void setInicio(int f, int c) { let filaInicio = f; let colInicio = c; return; }
     method void setEnemigoInicio(int f, int c) { let filaEnemigoInicio = f; let colEnemigoInicio = c; return; }
+    method void setEnemigo2Inicio(int f, int c) { let filaEnemigo2Inicio = f; let colEnemigo2Inicio = c; return; }
 
     method void eliminar() {
         var int i;
         var Objetivo obj;
         let i = 0;
-        while (i < conteoObjetivos) {
+        while (i < capacidadObjetivos) {
             let obj = objetivos[i];
             if (~(obj = null)) { do obj.eliminar(); }
             let i = i + 1;
         }
-        do objetivos.dispose();
-        do celdas.dispose();
+        do Memory.deAlloc(objetivos);
+        do Memory.deAlloc(celdas);
         do Memory.deAlloc(this);
         return;
     }

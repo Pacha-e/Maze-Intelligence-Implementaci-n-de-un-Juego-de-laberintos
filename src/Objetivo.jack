@@ -1,12 +1,25 @@
-/** Representa un punto de puntaje en el laberinto. */
+/** Representa un punto de puntaje en el laberinto.
+ *  Disenado para reuso: las instancias se pre-alocan una sola vez en
+ *  Laberinto y se reposicionan via fijar() en cada nivel.
+ */
 class Objetivo {
     field int fila, col;
+
     constructor Objetivo new(int f, int c) {
-        let fila = f; let col = c;
+        let fila = f;
+        let col = c;
         return this;
     }
+
+    method void fijar(int f, int c) {
+        let fila = f;
+        let col = c;
+        return;
+    }
+
     method int getFila() { return fila; }
     method int getCol() { return col; }
+
     method void eliminar() {
         do Memory.deAlloc(this);
         return;

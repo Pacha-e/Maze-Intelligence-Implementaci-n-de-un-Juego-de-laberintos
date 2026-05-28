@@ -121,12 +121,12 @@ class MenuPrincipal {
         do Output.moveCursor(20, 21);
         do Output.printString(txtSalir);
 
-        // Decoracion en esquinas
+        // Decoracion en esquinas (dentro del marco interno 17,17 a 494,238)
         do Screen.setColor(true);
-        do Screen.drawRectangle(25, 25, 35, 35);
-        do Screen.drawRectangle(476, 25, 486, 35);
-        do Screen.drawRectangle(25, 219, 35, 229);
-        do Screen.drawRectangle(476, 219, 486, 229);
+        do Screen.drawRectangle(20, 20, 30, 30);
+        do Screen.drawRectangle(481, 20, 491, 30);
+        do Screen.drawRectangle(20, 225, 30, 235);
+        do Screen.drawRectangle(481, 225, 491, 235);
 
         return;
     }
@@ -174,6 +174,17 @@ class MenuPrincipal {
 
     /** Libera los recursos del menu. */
     method void eliminar() {
+        do txtTitulo.dispose();
+        do txtMision.dispose();
+        do txtSalir.dispose();
+        do txtSelPrefijo.dispose();
+        do txtNoSelPrefijo.dispose();
+        do txtBracketCierre.dispose();
+        do txtSelSufijo.dispose();
+        do txtNoSelSufijo.dispose();
+        do txtModoEnt.dispose();
+        do txtModoNor.dispose();
+        do txtModoExp.dispose();
         do Memory.deAlloc(this);
         return;
     }
