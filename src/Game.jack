@@ -44,7 +44,7 @@ class Game {
                 do handleEndKey(key);
             }
 
-            do Sys.wait(60);
+            do Sys.wait(5);
         }
         return;
     }
@@ -328,7 +328,7 @@ class Game {
 
     method void waitForRelease() {
         while (~(Keyboard.keyPressed() = 0)) {
-            do Sys.wait(30);
+            do Sys.wait(5);
         }
         return;
     }

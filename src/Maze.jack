@@ -11,8 +11,8 @@ class Maze {
     field int goalCol;
 
     constructor Maze new(int selectedLevel) {
-        let rows = 12;
-        let cols = 16;
+        let rows = 10;
+        let cols = 12;
         let level = selectedLevel;
         let cells = Array.new(rows * cols);
         do build();
@@ -20,17 +20,14 @@ class Maze {
     }
 
     method void build() {
-        var int row;
-        var int col;
+        var int index;
+        var int total;
 
-        let row = 0;
-        while (row < rows) {
-            let col = 0;
-            while (col < cols) {
-                do setCell(row, col, 0);
-                let col = col + 1;
-            }
-            let row = row + 1;
+        let index = 0;
+        let total = rows * cols;
+        while (index < total) {
+            let cells[index] = 0;
+            let index = index + 1;
         }
 
         do buildBorder();
@@ -70,50 +67,46 @@ class Maze {
     }
 
     method void buildLevelOne() {
-        do wallRow(3, 2, 13, 7);
-        do wallRow(6, 1, 10, 4);
-        do wallCol(5, 4, 10, 8);
-        do wallCol(11, 1, 8, 5);
+        do wallRow(3, 2, 9, 5);
+        do wallRow(6, 1, 8, 3);
+        do wallCol(7, 2, 8, 4);
 
         let startRow = 1;
         let startCol = 1;
-        let enemyStartRow = 10;
+        let enemyStartRow = 8;
         let enemyStartCol = 1;
-        let goalRow = 10;
-        let goalCol = 14;
+        let goalRow = 8;
+        let goalCol = 10;
         return;
     }
 
     method void buildLevelTwo() {
-        do wallRow(2, 2, 13, 11);
-        do wallRow(4, 1, 12, 4);
-        do wallRow(6, 3, 13, 8);
-        do wallRow(8, 5, 14, 12);
-        do wallCol(6, 2, 9, 5);
-        do wallCol(11, 1, 8, 7);
+        do wallRow(2, 1, 9, 4);
+        do wallRow(4, 3, 10, 8);
+        do wallRow(6, 1, 8, 2);
+        do wallCol(6, 2, 7, 5);
 
-        let startRow = 10;
+        let startRow = 8;
         let startCol = 1;
-        let enemyStartRow = 10;
-        let enemyStartCol = 14;
+        let enemyStartRow = 8;
+        let enemyStartCol = 10;
         let goalRow = 1;
-        let goalCol = 14;
+        let goalCol = 10;
         return;
     }
 
     method void buildLevelThree() {
-        do wallRow(2, 1, 12, 6);
-        do wallRow(4, 3, 14, 12);
-        do wallRow(6, 1, 11, 2);
-        do wallRow(8, 4, 13, 9);
-        do wallCol(5, 2, 10, 7);
-        do wallCol(10, 1, 8, 3);
+        do wallRow(2, 1, 9, 5);
+        do wallRow(4, 2, 10, 9);
+        do wallRow(6, 1, 8, 2);
+        do wallCol(4, 2, 8, 7);
+        do wallCol(8, 1, 7, 3);
 
         let startRow = 1;
-        let startCol = 14;
+        let startCol = 10;
         let enemyStartRow = 1;
         let enemyStartCol = 1;
-        let goalRow = 10;
+        let goalRow = 8;
         let goalCol = 1;
         return;
     }
@@ -188,51 +181,48 @@ class Maze {
     method void draw() {
         var int row;
         var int col;
-
-        let row = 0;
-        while (row < rows) {
-            let col = 0;
-            while (col < cols) {
-                do drawCell(row, col);
-                let col = col + 1;
-            }
-            let row = row + 1;
-        }
-        return;
-    }
-
-    method void drawCell(int row, int col) {
         var int x;
         var int y;
+        var int index;
         var int value;
 
-        let x = cellX(col);
-        let y = cellY(row);
-        let value = getCell(row, col);
+        let row = 0;
+        let y = 42;
+        let index = 0;
+        while (row < rows) {
+            let col = 0;
+            let x = 10;
+            while (col < cols) {
+                let value = cells[index];
 
-        do Screen.setColor(false);
-        do Screen.drawRectangle(x, y, x + 13, y + 13);
+                if (value = 1) {
+                    do Screen.setColor(true);
+                    do Screen.drawRectangle(x, y, x + 13, y + 13);
+                }
 
-        if (value = 1) {
-            do Screen.setColor(true);
-            do Screen.drawRectangle(x, y, x + 13, y + 13);
-        }
+                if (value = 2) {
+                    do Screen.setColor(true);
+                    do Screen.drawRectangle(x + 4, y + 4, x + 9, y + 9);
+                    do Screen.drawRectangle(x + 6, y + 1, x + 7, y + 12);
+                    do Screen.drawRectangle(x + 1, y + 6, x + 12, y + 7);
+                }
 
-        if (value = 2) {
-            do Screen.setColor(true);
-            do Screen.drawRectangle(x + 4, y + 4, x + 9, y + 9);
-            do Screen.drawRectangle(x + 6, y + 1, x + 7, y + 12);
-            do Screen.drawRectangle(x + 1, y + 6, x + 12, y + 7);
+                let col = col + 1;
+                let x = x + 16;
+                let index = index + 1;
+            }
+            let row = row + 1;
+            let y = y + 16;
         }
         return;
     }
 
     method int cellX(int col) {
-        return 8 + (col * 14);
+        return 10 + (col * 16);
     }
 
     method int cellY(int row) {
-        return 38 + (row * 14);
+        return 42 + (row * 16);
     }
 
     method int getRows() {

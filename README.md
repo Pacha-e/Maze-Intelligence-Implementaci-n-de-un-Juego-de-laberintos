@@ -14,6 +14,19 @@ Juego de laberintos desarrollado en Jack para Nand2Tetris. El jugador debe llega
 
 ## Como ejecutar
 
+### Opcion web
+
+1. Abrir el Jack Compiler web: <https://nand2tetris.github.io/web-ide/compiler/>.
+2. Cargar la carpeta `src` con el boton de carpeta.
+3. Presionar `Compile`.
+4. Presionar `Run` para pasar al VM Emulator.
+5. Subir la velocidad del VM a `Fast`, presionar `Run` y luego `Enable Keyboard`.
+6. Elegir un modo con `1`, `2` o `3`.
+
+Captura de prueba: [`docs/vm-emulator-playtest.png`](docs/vm-emulator-playtest.png).
+
+### Opcion local
+
 1. Abrir la carpeta `src` con las herramientas de Nand2Tetris.
 2. Compilar los archivos Jack:
 
