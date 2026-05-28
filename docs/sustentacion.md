@@ -124,6 +124,70 @@ Resultado: el enemigo se mueve de `(0,0)` a `(0,1)`, primer paso de la ruta por 
 - **Validacion defensiva en setters de mapa**: `Laberinto.setObjetivo / setInicio / setEnemigoInicio / setEnemigo2Inicio` rechazan silenciosamente coordenadas que caigan en muro o fuera del grid (via `puedeEntrar`). Es una capa redundante sobre la validacion de movimiento que blinda al juego contra mapas mal definidos: nunca se coloca una galleta inalcanzable, ni un actor empieza atrapado.
 - **Respaldo voraz en la IA** (`Enemigo.pasoVoraz`): si la heuristica selectiva no encuentra al jugador en 150 expansiones, el enemigo evalua sus 4 vecinos transitables y se mueve al de menor distancia Manhattan. Cumple con el criterio "adaptativo e inteligente" de la rubrica.
 
+## Preguntas anticipadas de sustentacion
+
+### "La pantalla de Nand2Tetris es muy limitada, &iquest;como lograron tanto detalle visual?"
+
+La premisa de la pregunta es enga&ntilde;osa y conviene aclararla primero antes de explicar la tecnica.
+
+**1. La pantalla del Hack no es de "pocos pixeles".** Es de **512x256 pixeles monocromaticos** = 131,072 pixeles individuales. Lo que hace que la mayoria de los proyectos de Jack se vean limitados no es la resolucion de hardware, sino que usan exclusivamente `Output.printString` / `Output.printChar` para todo, y la consola de texto del JackOS esta fija en **64 columnas x 23 filas** (caracteres tipograficos de 8x11 px). Eso reduce el espacio expresivo de 131,072 pixeles a apenas 1,472 celdas de texto.
+
+**2. Nuestra estrategia: separar `Output` y `Screen` por capas.**
+
+| Capa | Clase Jack | Para que sirve |
+|---|---|---|
+| Texto (HUD) | `Output.printString` / `printInt` | Solo el nivel y el puntaje en el HUD superior |
+| Graficos (todo lo demas) | `Screen.drawRectangle`, `drawLine`, `drawCircle`, `drawPixel` | Muros, jugador, enemigos, cristales, corazones, corona, marcos, etc. |
+
+Al usar `Screen.*` accedemos al control pixel-perfect de los 131,072 pixeles del framebuffer Hack (`0x4000`-`0x5FFF` en el mapa de memoria). El JackOS expone solo cuatro primitivas, pero combinadas componen cualquier figura.
+
+**3. Tecnica de composicion 1-bit por capas (cada sprite es un mini-collage).**
+
+El truco mas importante: como la pantalla es 1-bit (sin canal alfa, sin transparencia), simulamos "huecos" alternando `Screen.setColor(true)` (negro) y `Screen.setColor(false)` (blanco) sobre la misma region. Cada sprite se construye en 3 pasadas:
+
+```
+1. setColor(true)  -> drawRectangle / drawCircle del contorno y cuerpo
+2. setColor(false) -> drawRectangle interior (la "cara" o "ojos" blancos)
+3. setColor(true)  -> drawRectangle / drawLine para detalles finos
+                     (pupilas, sonrisa, cuerno, cruz interna del muro)
+```
+
+Ejemplo concreto del sprite del jugador (`Jugador.dibujar`, 12x12 px) en celda 16x16:
+
+```jack
+// 1. Cabeza negra
+do Screen.setColor(true);
+do Screen.drawRectangle(x + 2, y + 2, x + 13, y + 13);
+// 2. Cara blanca (recorte interior)
+do Screen.setColor(false);
+do Screen.drawRectangle(x + 4, y + 4, x + 11, y + 11);
+// 3. Detalles negros: ojos + sonrisa
+do Screen.setColor(true);
+do Screen.drawRectangle(x + 5, y + 5, x + 6, y + 7);
+do Screen.drawRectangle(x + 9, y + 5, x + 10, y + 7);
+do Screen.drawLine(x + 6, y + 10, x + 9, y + 10);
+do Screen.drawPixel(x + 5, y + 9);
+do Screen.drawPixel(x + 10, y + 9);
+```
+
+Total: 6 primitivas para una cara expresiva. Eso es **cientos de veces mas barato** que iterar `drawPixel` celda por celda.
+
+**4. Eleccion de primitivas por costo.** No todas las primitivas del JackOS cuestan lo mismo en ciclos VM:
+
+- `drawRectangle` es la mas barata por pixel cubierto (escribe palabras de 16 bits enteras directo al framebuffer cuando el rectangulo esta alineado).
+- `drawLine` es proporcional a la longitud.
+- `drawCircle` requiere `r` iteraciones del algoritmo de Bresenham; costoso para radios grandes.
+
+Por eso usamos `drawCircle` **solo** donde aporta caracter (el domo del enemigo, el sprite gigante de derrota) y `drawRectangle`/`drawLine` para todo lo demas. La escena de partida completa (mapa 13x31 + 2 enemigos + jugador + cristales + HUD) cabe en ~250-400 primitivas por frame, suficientemente rapido en modo Fast de la VM.
+
+**5. Coordenadas calculadas, no hardcodeadas.** Cada celda del grid se posiciona con `Laberinto.celdaX(c)` y `Laberinto.celdaY(f)` (origen `(10, 42)`, paso 16 px). Eso deja **fila 0 de Output (los 8x11 px superiores) libre** para el HUD textual, y reserva los 214 pixeles restantes para el grid. Los sprites se dibujan en coordenadas relativas a `(celdaX, celdaY)`, asi cualquier ajuste del origen propaga sin cambiar codigo.
+
+**6. Pool de memoria pre-alocada.** Dibujar 250+ primitivas por frame **NO** asigna ni libera memoria del heap — todos los sprites son metodos sobre objetos pre-alocados una sola vez (ver seccion de gestion estricta de memoria). Eso evita la fragmentacion que tipicamente ralentiza la VM despues de varios niveles.
+
+**Resumen de la respuesta corta para sustentacion**: la pantalla Hack tiene 131,072 pixeles individuales (no "unos cuantos"); el limite de "pocos caracteres" solo aplica a `Output.*`. Nosotros separamos las capas: `Output` para HUD numerico y `Screen` para todo el arte. Cada sprite es un collage 1-bit de 3 pasadas (cuerpo negro, recorte blanco, detalles negros), construido solo con `drawRectangle`, `drawLine`, `drawCircle` y `drawPixel`. La eleccion de primitivas se hace por costo en ciclos VM (rectangulos primero, circulos solo donde aportan) y la coherencia visual viene del tema unificado "Cripta del Centinela".
+
+---
+
 ## Casos de prueba manuales
 
 | Caso | Resultado esperado |
