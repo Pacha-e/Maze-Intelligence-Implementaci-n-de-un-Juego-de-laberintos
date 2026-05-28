@@ -1,0 +1,9 @@
+*.vm
+*.asm
+*.hack
+*.out
+*.cmp
+*.tst
+*.xml
+node_modules/
+.DS_Store
