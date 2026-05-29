@@ -1,40 +1,29 @@
-/** IA del enemigo: heuristica Manhattan con conciencia de muros.
- *
- *  El enemigo no usa BFS ni A*. Mantiene una frontera de celdas candidatas
- *  y en cada iteracion elige la celda con menor distancia Manhattan al
- *  jugador. La "conciencia de muros" viene del chequeo lab.puedeEntrar
- *  antes de agregar cualquier vecino a la frontera: las celdas con muro
- *  o fuera de bordes nunca entran. Asi el enemigo rodea obstaculos sin
- *  necesidad de reconstruir el camino completo.
- *
- *  Variante moverEvitando(ef, ec): en modo Experto, el segundo enemigo
- *  recibe la posicion del primero (ef, ec) y la marca como visitada antes
- *  de empezar; el segundo enemigo entonces evita esa celda al planear su
- *  paso, lo que evita que ambos se fusionen y produce una pinza tactica.
- *  Sentinela (-1, -1) significa "sin companero".
- */
+// Enemigo perseguidor.
+// Heuristica: distancia Manhattan al jugador con filtro de muros.
+// Mantiene una frontera de celdas alcanzables y en cada paso elige la
+// mas cercana al jugador. Si en 150 expansiones no llega, da un paso
+// voraz hacia el vecino transitable mas cercano.
 class Enemigo {
     field int fila, col;
     field int filaAnt, colAnt;
     field int capacidad;
-    field int variante;  // 1 = centinela comun, 2 = cazador (cuerno)
-    
-    // Estructuras de la heuristica Manhattan con conciencia de muros
-    field Array colaF, colaC;       // Frontera de exploracion (Filas y Columnas)
-    field Array primeraF, primeraC; // Rastro del primer movimiento realizado
-    field Array visitado;           // Registro para evitar ciclos y muros
+    field int variante;
+
+    field Array colaF, colaC;
+    field Array primeraF, primeraC;
+    field Array visitado;
 
     constructor Enemigo new(int max) {
         let capacidad = max;
-        // Pre-alocacion de memoria para la busqueda mental
         let colaF = Array.new(capacidad);
         let colaC = Array.new(capacidad);
         let primeraF = Array.new(capacidad);
         let primeraC = Array.new(capacidad);
         let visitado = Array.new(capacidad);
-        
-        let fila = 0; let col = 0;
-        let filaAnt = 0; let colAnt = 0;
+        let fila = 0;
+        let col = 0;
+        let filaAnt = 0;
+        let colAnt = 0;
         let variante = 1;
         return this;
     }
@@ -42,8 +31,10 @@ class Enemigo {
     method void setVariante(int v) { let variante = v; return; }
 
     method void fijar(int f, int c) {
-        let fila = f; let col = c;
-        let filaAnt = f; let colAnt = c;
+        let fila = f;
+        let col = c;
+        let filaAnt = f;
+        let colAnt = c;
         return;
     }
 
@@ -52,41 +43,32 @@ class Enemigo {
         return;
     }
 
-    /** Heuristica Manhattan con conciencia de muros: en cada iteracion
-     *  selecciona de la frontera la celda con menor distancia Manhattan
-     *  al jugador, y solo expande vecinos que pasen lab.puedeEntrar.
-     *  Esto rodea muros y bordes sin construir el camino completo.
-     */
+    // ef, ec: posicion del companero (modo Experto). -1,-1 si no hay.
     method void moverEvitando(Jugador jug, Laberinto lab, int ef, int ec) {
         var int frente, final, fAct, cAct, fObj, cObj, mejorI, i;
         var int dMin, dAct;
-        
-        let filaAnt = fila; let colAnt = col;
-        let fObj = jug.getFila(); let cObj = jug.getCol();
-        
-        // 1. Limpiar estado de busqueda
-        let i = 0;
-        while (i < capacidad) { let visitado[i] = 0; let i = i + 1; }
-        let frente = 0; let final = 0;
 
-        // 2. Inicializar frontera con la posicion actual
-        let colaF[final] = fila; 
+        let filaAnt = fila;
+        let colAnt = col;
+        let fObj = jug.getFila();
+        let cObj = jug.getCol();
+
+        do limpiarVisitados();
+        let frente = 0;
+        let final = 0;
+
+        let colaF[final] = fila;
         let colaC[final] = col;
-        let primeraF[final] = fila; 
+        let primeraF[final] = fila;
         let primeraC[final] = col;
         let visitado[lab.getIndice(fila, col)] = 1;
-        
-        // Marcar posicion del otro enemigo como muro temporal (Sombra Tactica).
-        // Usamos (-1, -1) como sentinela "sin compañero": tratamos (>= 0) como valido.
+
         if ((ef > -1) & (ec > -1)) {
             let visitado[lab.getIndice(ef, ec)] = 1;
         }
         let final = final + 1;
 
-        // 3. Bucle principal: tope de 150 expansiones para mantener fluidez en la VM
         while ((frente < final) & (frente < 150)) {
-
-            // Selecciona el nodo de la frontera con menor distancia Manhattan al jugador
             let mejorI = frente;
             let dMin = 10000;
             let i = frente;
@@ -98,167 +80,163 @@ class Enemigo {
                 }
                 let i = i + 1;
             }
-            // Intercambiar el mejor al frente para procesarlo
             do intercambiar(frente, mejorI);
-            
-            let fAct = colaF[frente]; 
+
+            let fAct = colaF[frente];
             let cAct = colaC[frente];
 
-            // ¿Llegamos al jugador en nuestra simulacion?
             if ((fAct = fObj) & (cAct = cObj)) {
                 let fila = primeraF[frente];
                 let col = primeraC[frente];
-                return; // Encontramos el camino
+                return;
             }
 
-            // Expandir vecinos
-            let final = expandir(fAct - 1, cAct, frente, final, lab); // Arriba
-            let final = expandir(fAct + 1, cAct, frente, final, lab); // Abajo
-            let final = expandir(fAct, cAct - 1, frente, final, lab); // Izquierda
-            let final = expandir(fAct, cAct + 1, frente, final, lab); // Derecha
-
+            let final = expandir(fAct - 1, cAct, frente, final, lab);
+            let final = expandir(fAct + 1, cAct, frente, final, lab);
+            let final = expandir(fAct, cAct - 1, frente, final, lab);
+            let final = expandir(fAct, cAct + 1, frente, final, lab);
             let frente = frente + 1;
         }
-
-        // Respaldo voraz: si la heuristica no alcanza al jugador en 150
-        // expansiones, intenta un paso simple hacia el jugador escogiendo
-        // entre los 4 vecinos transitables el de menor distancia Manhattan.
-        // Asi el enemigo nunca se queda "congelado" frente al jugador.
         do pasoVoraz(fObj, cObj, lab, ef, ec);
         return;
     }
 
-    /** Fallback: 1 paso voraz Manhattan respetando muros y companero. */
+    method void limpiarVisitados() {
+        var int i;
+        let i = 0;
+        while (i < capacidad) {
+            let visitado[i] = 0;
+            let i = i + 1;
+        }
+        return;
+    }
+
     method void pasoVoraz(int fObj, int cObj, Laberinto lab, int ef, int ec) {
         var int mejorF, mejorC, mejorD, d;
-        let mejorF = fila; let mejorC = col; let mejorD = distancia(fila, col, fObj, cObj);
-        // Evaluar arriba
-        if (lab.puedeEntrar(fila - 1, col)) {
-            if (~((fila - 1 = ef) & (col = ec))) {
-                let d = distancia(fila - 1, col, fObj, cObj);
-                if (d < mejorD) { let mejorD = d; let mejorF = fila - 1; let mejorC = col; }
-            }
+        let mejorF = fila;
+        let mejorC = col;
+        let mejorD = distancia(fila, col, fObj, cObj);
+        if (vecinoValido(fila - 1, col, lab, ef, ec)) {
+            let d = distancia(fila - 1, col, fObj, cObj);
+            if (d < mejorD) { let mejorD = d; let mejorF = fila - 1; let mejorC = col; }
         }
-        // Evaluar abajo
-        if (lab.puedeEntrar(fila + 1, col)) {
-            if (~((fila + 1 = ef) & (col = ec))) {
-                let d = distancia(fila + 1, col, fObj, cObj);
-                if (d < mejorD) { let mejorD = d; let mejorF = fila + 1; let mejorC = col; }
-            }
+        if (vecinoValido(fila + 1, col, lab, ef, ec)) {
+            let d = distancia(fila + 1, col, fObj, cObj);
+            if (d < mejorD) { let mejorD = d; let mejorF = fila + 1; let mejorC = col; }
         }
-        // Evaluar izquierda
-        if (lab.puedeEntrar(fila, col - 1)) {
-            if (~((fila = ef) & (col - 1 = ec))) {
-                let d = distancia(fila, col - 1, fObj, cObj);
-                if (d < mejorD) { let mejorD = d; let mejorF = fila; let mejorC = col - 1; }
-            }
+        if (vecinoValido(fila, col - 1, lab, ef, ec)) {
+            let d = distancia(fila, col - 1, fObj, cObj);
+            if (d < mejorD) { let mejorD = d; let mejorF = fila; let mejorC = col - 1; }
         }
-        // Evaluar derecha
-        if (lab.puedeEntrar(fila, col + 1)) {
-            if (~((fila = ef) & (col + 1 = ec))) {
-                let d = distancia(fila, col + 1, fObj, cObj);
-                if (d < mejorD) { let mejorD = d; let mejorF = fila; let mejorC = col + 1; }
-            }
+        if (vecinoValido(fila, col + 1, lab, ef, ec)) {
+            let d = distancia(fila, col + 1, fObj, cObj);
+            if (d < mejorD) { let mejorD = d; let mejorF = fila; let mejorC = col + 1; }
         }
-        let fila = mejorF; let col = mejorC;
+        let fila = mejorF;
+        let col = mejorC;
         return;
+    }
+
+    method boolean vecinoValido(int f, int c, Laberinto lab, int ef, int ec) {
+        if (~lab.puedeEntrar(f, c)) { return false; }
+        if ((f = ef) & (c = ec)) { return false; }
+        return true;
     }
 
     method int expandir(int nf, int nc, int bI, int fin, Laberinto lab) {
         var int idx;
-        if (fin < capacidad) {
-            if (lab.puedeEntrar(nf, nc)) {
-                let idx = lab.getIndice(nf, nc);
-                if (visitado[idx] = 0) {
-                    let colaF[fin] = nf;
-                    let colaC[fin] = nc;
-                    let visitado[idx] = 1;
-                    
-                    // Si es el primer paso desde el origen, guardar esta direccion
-                    if ((colaF[bI] = filaAnt) & (colaC[bI] = colAnt)) {
-                        let primeraF[fin] = nf;
-                        let primeraC[fin] = nc;
-                    } else {
-                        // Heredar la direccion del padre
-                        let primeraF[fin] = primeraF[bI];
-                        let primeraC[fin] = primeraC[bI];
-                    }
-                    let fin = fin + 1;
-                }
-            }
+        if (~(fin < capacidad)) { return fin; }
+        if (~lab.puedeEntrar(nf, nc)) { return fin; }
+        let idx = lab.getIndice(nf, nc);
+        if (~(visitado[idx] = 0)) { return fin; }
+        let colaF[fin] = nf;
+        let colaC[fin] = nc;
+        let visitado[idx] = 1;
+        if ((colaF[bI] = filaAnt) & (colaC[bI] = colAnt)) {
+            let primeraF[fin] = nf;
+            let primeraC[fin] = nc;
+        } else {
+            let primeraF[fin] = primeraF[bI];
+            let primeraC[fin] = primeraC[bI];
         }
-        return fin;
+        return fin + 1;
     }
 
     method void intercambiar(int a, int b) {
         var int tf, tc, pf, pc;
         if (a = b) { return; }
-        let tf = colaF[a]; let tc = colaC[a];
-        let pf = primeraF[a]; let pc = primeraC[a];
-        
-        let colaF[a] = colaF[b]; let colaC[a] = colaC[b];
-        let primeraF[a] = primeraF[b]; let primeraC[a] = primeraC[b];
-        
-        let colaF[b] = tf; let colaC[b] = tc;
-        let primeraF[b] = pf; let primeraC[b] = pc;
+        let tf = colaF[a];
+        let tc = colaC[a];
+        let pf = primeraF[a];
+        let pc = primeraC[a];
+        let colaF[a] = colaF[b];
+        let colaC[a] = colaC[b];
+        let primeraF[a] = primeraF[b];
+        let primeraC[a] = primeraC[b];
+        let colaF[b] = tf;
+        let colaC[b] = tc;
+        let primeraF[b] = pf;
+        let primeraC[b] = pc;
         return;
     }
 
     method int distancia(int f1, int c1, int f2, int c2) {
         var int df, dc;
-        let df = f1 - f2; let dc = c1 - c2;
+        let df = f1 - f2;
+        let dc = c1 - c2;
         if (df < 0) { let df = -df; }
         if (dc < 0) { let dc = -dc; }
         return df + dc;
     }
 
-    method void retroceder() { let fila = filaAnt; let col = colAnt; return; }
+    method void retroceder() {
+        let fila = filaAnt;
+        let col = colAnt;
+        return;
+    }
+
     method boolean estaEn(int f, int c) { return (fila = f) & (col = c); }
 
-    /** Sprite del enemigo (12x14 dentro de celda 16x16):
-     *  Centinela-fantasma estilo arcade clasico.
-     *  - Domo redondeado superior (drawCircle).
-     *  - Cuerpo rectangular.
-     *  - Borde inferior con ondas (drawLine) para evocar el "halo" tipico
-     *    de los fantasmas de Pac-Man.
-     *  - Dos ojos blancos con pupila negra.
-     *  - Variante 2 (modo Experto): cuerno superior, ojos rasgados.
-     */
     method void dibujar(Laberinto lab) {
-        var int x, y, cx;
-        let x = lab.celdaX(col); let y = lab.celdaY(fila);
-
-        // Cuerpo: rectangulo principal (cabeza + torso)
+        var int x, y;
+        let x = lab.celdaX(col);
+        let y = lab.celdaY(fila);
         do Screen.setColor(true);
         do Screen.drawRectangle(x + 2, y + 4, x + 13, y + 12);
-        // Domo superior (semicirculo) — drawCircle completo, el inferior queda detras
-        let cx = x + 7;
-        do Screen.drawCircle(cx, y + 5, 4);
-
-        // Ondas inferiores (3 pequenos triangulos blancos para simular el halo)
+        do Screen.drawCircle(x + 7, y + 5, 4);
         do Screen.setColor(false);
+        do dibujarOndas(x, y);
+        do Screen.drawRectangle(x + 4, y + 6, x + 6, y + 8);
+        do Screen.drawRectangle(x + 9, y + 6, x + 11, y + 8);
+        do Screen.setColor(true);
+        if (variante = 2) {
+            do dibujarPupilasRasgadas(x, y);
+        } else {
+            do dibujarPupilasCentinela(x, y);
+        }
+        return;
+    }
+
+    method void dibujarOndas(int x, int y) {
         do Screen.drawLine(x + 3, y + 12, x + 4, y + 13);
         do Screen.drawLine(x + 4, y + 13, x + 5, y + 12);
         do Screen.drawLine(x + 6, y + 12, x + 7, y + 13);
         do Screen.drawLine(x + 7, y + 13, x + 8, y + 12);
         do Screen.drawLine(x + 9, y + 12, x + 10, y + 13);
         do Screen.drawLine(x + 10, y + 13, x + 11, y + 12);
+        return;
+    }
 
-        // Ojos: blanco (fondo) con pupila negra
-        do Screen.setColor(false);
-        do Screen.drawRectangle(x + 4, y + 6, x + 6, y + 8);
-        do Screen.drawRectangle(x + 9, y + 6, x + 11, y + 8);
-        do Screen.setColor(true);
-        if (variante = 2) {
-            // Variante "cazador": pupilas rasgadas + cuerno superior
-            do Screen.drawRectangle(x + 5, y + 6, x + 5, y + 8);
-            do Screen.drawRectangle(x + 10, y + 6, x + 10, y + 8);
-            do Screen.drawLine(x + 7, y, x + 7, y + 2);  // cuerno
-        } else {
-            // Variante "centinela": pupilas cuadradas centradas
-            do Screen.drawRectangle(x + 5, y + 7, x + 6, y + 8);
-            do Screen.drawRectangle(x + 9, y + 7, x + 10, y + 8);
-        }
+    method void dibujarPupilasCentinela(int x, int y) {
+        do Screen.drawRectangle(x + 5, y + 7, x + 6, y + 8);
+        do Screen.drawRectangle(x + 9, y + 7, x + 10, y + 8);
+        return;
+    }
+
+    method void dibujarPupilasRasgadas(int x, int y) {
+        do Screen.drawRectangle(x + 5, y + 6, x + 5, y + 8);
+        do Screen.drawRectangle(x + 10, y + 6, x + 10, y + 8);
+        do Screen.drawLine(x + 7, y, x + 7, y + 2);
         return;
     }
 

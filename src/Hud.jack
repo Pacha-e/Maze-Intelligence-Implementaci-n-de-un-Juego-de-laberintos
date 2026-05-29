@@ -1,0 +1,73 @@
+// Panel superior con nivel, puntaje y corazones de vida.
+class Hud {
+    field String linea;
+    field String etiquetaNivel;
+    field String etiquetaPuntos;
+
+    constructor Hud new() {
+        let linea = "                                                                ";
+        let etiquetaNivel = " | Nivel: ";
+        let etiquetaPuntos = " | Puntos: ";
+        return this;
+    }
+
+    method void dibujar(int nivel, int puntaje, int vidas) {
+        do limpiarTextoSuperior();
+        do imprimirEstado(nivel, puntaje);
+        do limpiarZonaVidas();
+        do dibujarVidas(vidas);
+        return;
+    }
+
+    method void limpiarTextoSuperior() {
+        do Output.moveCursor(0, 0);
+        do Output.printString(linea);
+        return;
+    }
+
+    method void imprimirEstado(int nivel, int puntaje) {
+        do Output.moveCursor(0, 0);
+        do Output.printString(etiquetaNivel);
+        do Output.printInt(nivel);
+        do Output.printString(etiquetaPuntos);
+        do Output.printInt(puntaje);
+        return;
+    }
+
+    method void limpiarZonaVidas() {
+        do Screen.setColor(false);
+        do Screen.drawRectangle(380, 4, 510, 18);
+        return;
+    }
+
+    method void dibujarVidas(int vidas) {
+        var int i, x;
+        let i = 0;
+        while (i < vidas) {
+            let x = 384 + (i * 14);
+            do dibujarCorazon(x, 6);
+            let i = i + 1;
+        }
+        return;
+    }
+
+    method void dibujarCorazon(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x + 1, y, x + 3, y + 1);
+        do Screen.drawRectangle(x + 5, y, x + 7, y + 1);
+        do Screen.drawRectangle(x, y + 1, x + 8, y + 4);
+        do Screen.drawRectangle(x + 1, y + 5, x + 7, y + 5);
+        do Screen.drawRectangle(x + 2, y + 6, x + 6, y + 6);
+        do Screen.drawRectangle(x + 3, y + 7, x + 5, y + 7);
+        do Screen.drawPixel(x + 4, y + 8);
+        return;
+    }
+
+    method void eliminar() {
+        do linea.dispose();
+        do etiquetaNivel.dispose();
+        do etiquetaPuntos.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+}

@@ -1,63 +1,40 @@
-/** Coordina la logica del juego, estados y transiciones de nivel.
- *
- *  Estados (campo `estado`):
- *    0 = menu  |  1 = partida  |  2 = victoria  |  3 = derrota
- *
- *  Codigos de tecla Jack relevantes (Keyboard.keyPressed):
- *    81  = 'Q'  (salir / volver al menu)
- *    128 = Enter
- *    130 = flecha izquierda    |  131 = flecha arriba
- *    132 = flecha derecha      |  133 = flecha abajo
- *    65 = 'A'   |  68 = 'D'   |  83 = 'S'   |  87 = 'W'
- *
- *  Dimensiones maximas pre-alocadas: 13 filas x 31 columnas = 403 celdas.
- *  Toda la gestion de memoria es pool persistente para evitar fragmentar el
- *  heap del JackOS al cambiar de nivel o reiniciar tras perder una vida.
- */
+// Orquestador del juego: maneja estados, vidas, puntaje y nivel.
+// Estados: 0 menu, 1 partida, 2 victoria, 3 derrota.
 class Juego {
     field Laberinto laberinto;
     field Jugador jugador;
     field Enemigo enemigo;
-    field Enemigo enemigo2; // Nuevo: Segundo enemigo para Modo Experto
+    field Enemigo enemigo2;
     field GestorNiveles gestorNiveles;
     field MenuPrincipal menu;
-    field int estado; // 0: Menu, 1: Juego, 2: Gano, 3: Perdio
+    field Hud hud;
+    field PantallaFinal pantallaFinal;
+    field int estado;
     field int nivel;
     field int modo;
     field int vidas;
     field int puntaje;
     field int movimientos;
     field boolean salir;
-    field String pnlClear, pnlVidas, pnlNivel, pnlPuntos;
-    field String txtGracias, txtPrompt;
-    field String txtVictoria, txtDerrota, txtPuntajeFinal, txtPromptMenu;
+    field String txtGracias;
+    field String txtVolver;
 
     constructor Juego new() {
         let gestorNiveles = GestorNiveles.new();
         let menu = MenuPrincipal.new();
-        // Todos los objetos del juego se pre-alocan UNA sola vez con
-        // capacidad maxima (grilla 13x31 = 403 celdas). Esto elimina los
-        // ciclos Memory.alloc/deAlloc entre niveles, evitando la
-        // fragmentacion del heap del JackOS que causa overflows.
+        let hud = Hud.new();
+        let pantallaFinal = PantallaFinal.new();
         let laberinto = Laberinto.new(13, 31);
         let jugador = Jugador.new();
         let enemigo = Enemigo.new(403);
-        let enemigo2 = Enemigo.new(403); // Segundo enemigo persistente
-        do enemigo2.setVariante(2);      // Cazador (cuerno) para diferenciarlo del centinela
+        let enemigo2 = Enemigo.new(403);
+        do enemigo2.setVariante(2);
         let estado = 0;
         let nivel = 1;
         let puntaje = 0;
         let salir = false;
-        let pnlClear = "                                                                ";
-        let pnlVidas = "Vidas: ";
-        let pnlNivel = " | Nivel: ";
-        let pnlPuntos = " | Puntos: ";
         let txtGracias = "GRACIAS POR JUGAR";
-        let txtPrompt = "PRESIONA CUALQUIER TECLA PARA VOLVER AL MENU";
-        let txtVictoria = "!HAS ESCAPADO!";
-        let txtDerrota = "!CAPTURADO!";
-        let txtPuntajeFinal = "Puntaje Final: ";
-        let txtPromptMenu = "Presiona cualquier tecla para el menu";
+        let txtVolver = "PRESIONA CUALQUIER TECLA PARA VOLVER AL MENU";
         return this;
     }
 
@@ -75,7 +52,7 @@ class Juego {
     method void manejarMenu() {
         let modo = menu.mostrar();
         if (modo = 0) {
-            do mostrarSalidaTemporal();
+            do mostrarDespedida();
             let estado = 0;
         } else {
             let puntaje = 0;
@@ -83,16 +60,6 @@ class Juego {
             do configurarVidas();
             do iniciarNivel();
         }
-        return;
-    }
-
-    method void mostrarSalidaTemporal() {
-        do Screen.clearScreen();
-        do Output.moveCursor(10, 25);
-        do Output.printString(txtGracias);
-        do Output.moveCursor(12, 9);
-        do Output.printString(txtPrompt);
-        do esperarTecla();
         return;
     }
 
@@ -107,8 +74,6 @@ class Juego {
         do gestorNiveles.poblarLaberinto(laberinto, modo, nivel);
         do jugador.fijar(laberinto.getFilaInicio(), laberinto.getColInicio());
         do enemigo.fijar(laberinto.getFilaEnemigoInicio(), laberinto.getColEnemigoInicio());
-        // Enemigo 2 solo se posiciona en modo Experto: evita dejarlo en
-        // una celda ilegal en modos 1 y 2 donde no se usa.
         if (modo = 3) {
             do enemigo2.fijar(laberinto.getFilaEnemigo2Inicio(), laberinto.getColEnemigo2Inicio());
         }
@@ -119,75 +84,78 @@ class Juego {
     }
 
     method void manejarCicloJuego() {
-        var int tecla;
-        var int df, dc;
-        var boolean movido, choque;
-        var int i, fr, fc, jf, jc;
-
+        var int tecla, df, dc;
         let tecla = Keyboard.keyPressed();
-        if (tecla = 81) { // Q -> volver al menu
+        if (tecla = 81) {
             do esperarLiberacion();
             let estado = 0;
             return;
         }
-
-        // Mapeo de teclas a delta (df = fila, dc = columna)
-        let df = 0; let dc = 0;
-        if ((tecla = 130) | (tecla = 65)) { let dc = -1; } // izquierda / A
-        if ((tecla = 131) | (tecla = 87)) { let df = -1; } // arriba    / W
-        if ((tecla = 132) | (tecla = 68)) { let dc = 1; }  // derecha   / D
-        if ((tecla = 133) | (tecla = 83)) { let df = 1; }  // abajo     / S
-
+        let df = 0;
+        let dc = 0;
+        if ((tecla = 130) | (tecla = 65)) { let dc = -1; }
+        if ((tecla = 131) | (tecla = 87)) { let df = -1; }
+        if ((tecla = 132) | (tecla = 68)) { let dc = 1; }
+        if ((tecla = 133) | (tecla = 83)) { let df = 1; }
         if (~(df = 0) | ~(dc = 0)) {
-            let movido = jugador.intentarMover(df, dc, laberinto);
-            if (movido) {
-                let movimientos = movimientos + 1;
-                let puntaje = puntaje + modo;
-                
-                let i = 0;
-                while (i < laberinto.getConteoObjetivos()) {
-                    let fr = laberinto.getFilaObjetivo(i);
-                    let fc = laberinto.getColObjetivo(i);
-                    if (jugador.estaEn(fr, fc)) {
-                        do laberinto.removerObjetivo(fr, fc);
-                        let puntaje = puntaje + 100;
-                    } else {
-                        let i = i + 1;
-                    }
-                }
-
-                if (laberinto.getConteoObjetivos() = 0) {
-                    do avanzarNivel();
-                    return;
-                }
-
-                do moverEnemigo();
-                // Colision: enemigo1 siempre, enemigo2 solo en modo Experto.
-                let jf = jugador.getFila();
-                let jc = jugador.getCol();
-                let choque = enemigo.estaEn(jf, jc);
-                if (~choque) {
-                    if (modo = 3) { let choque = enemigo2.estaEn(jf, jc); }
-                }
-                if (choque) {
-                    do perderVida();
-                } else {
-                    do renderizar();
-                }
-            }
+            do procesarMovimiento(df, dc);
             do esperarLiberacion();
         }
         return;
     }
 
+    method void procesarMovimiento(int df, int dc) {
+        var boolean movido;
+        let movido = jugador.intentarMover(df, dc, laberinto);
+        if (~movido) { return; }
+        let movimientos = movimientos + 1;
+        let puntaje = puntaje + modo;
+        do recolectarObjetivos();
+        if (laberinto.getConteoObjetivos() = 0) {
+            do avanzarNivel();
+            return;
+        }
+        do moverEnemigo();
+        if (detectarColision()) {
+            do perderVida();
+        } else {
+            do renderizar();
+        }
+        return;
+    }
+
+    method void recolectarObjetivos() {
+        var int i, f, c;
+        let i = 0;
+        while (i < laberinto.getConteoObjetivos()) {
+            let f = laberinto.getFilaObjetivo(i);
+            let c = laberinto.getColObjetivo(i);
+            if (jugador.estaEn(f, c)) {
+                do laberinto.removerObjetivo(f, c);
+                let puntaje = puntaje + 100;
+            } else {
+                let i = i + 1;
+            }
+        }
+        return;
+    }
+
+    method boolean detectarColision() {
+        var int f, c;
+        let f = jugador.getFila();
+        let c = jugador.getCol();
+        if (enemigo.estaEn(f, c)) { return true; }
+        if (modo = 3) {
+            if (enemigo2.estaEn(f, c)) { return true; }
+        }
+        return false;
+    }
+
     method void moverEnemigo() {
         do enemigo.moverHacia(jugador, laberinto);
         if (modo = 3) {
-            // Modo Experto: El segundo enemigo evita la posicion actual del primero
-            // para no fusionarse y crear una pinza tactica.
             do enemigo2.moverEvitando(jugador, laberinto, enemigo.getFila(), enemigo.getCol());
         }
-        // Modo Entrenamiento: enemigo solo avanza cada 3 movimientos.
         if (modo = 1) {
             if (~esMultiplo(movimientos, 3)) {
                 do enemigo.retroceder();
@@ -216,8 +184,8 @@ class Juego {
 
     method void perderVida() {
         let vidas = vidas - 1;
-        do renderizar(); 
-        do Sys.wait(1000); 
+        do renderizar();
+        do Sys.wait(1000);
         if (vidas < 1) {
             let estado = 3;
         } else {
@@ -232,129 +200,31 @@ class Juego {
         do jugador.dibujar(laberinto);
         do enemigo.dibujar(laberinto);
         if (modo = 3) { do enemigo2.dibujar(laberinto); }
-        do dibujarPanel();
-        return;
-    }
-
-    method void dibujarPanel() {
-        var int i, hx;
-        // Limpia franja de texto
-        do Output.moveCursor(0, 0);
-        do Output.printString(pnlClear);
-        // Texto: nivel y puntaje
-        do Output.moveCursor(0, 0);
-        do Output.printString(pnlNivel); do Output.printInt(nivel);
-        do Output.printString(pnlPuntos); do Output.printInt(puntaje);
-        // Limpia franja grafica de vidas (parte superior derecha)
-        do Screen.setColor(false);
-        do Screen.drawRectangle(380, 4, 510, 18);
-        // Iconos de vida: corazones pixel-art a la derecha del HUD
-        let i = 0;
-        while (i < vidas) {
-            let hx = 384 + (i * 14);
-            do dibujarCorazon(hx, 6);
-            let i = i + 1;
-        }
-        return;
-    }
-
-    /** Corazon pixel-art 9x8 px (vidas en el HUD). */
-    method void dibujarCorazon(int x, int y) {
-        do Screen.setColor(true);
-        // Dos jorobas
-        do Screen.drawRectangle(x + 1, y, x + 3, y + 1);
-        do Screen.drawRectangle(x + 5, y, x + 7, y + 1);
-        // Cuerpo
-        do Screen.drawRectangle(x, y + 1, x + 8, y + 4);
-        // Triangulo inferior
-        do Screen.drawRectangle(x + 1, y + 5, x + 7, y + 5);
-        do Screen.drawRectangle(x + 2, y + 6, x + 6, y + 6);
-        do Screen.drawRectangle(x + 3, y + 7, x + 5, y + 7);
-        do Screen.drawPixel(x + 4, y + 8);
+        do hud.dibujar(nivel, puntaje, vidas);
         return;
     }
 
     method void mostrarVictoria() {
-        do Screen.clearScreen();
-        // Marco doble concentrico (estilo trofeo)
-        do Screen.setColor(true);
-        do Screen.drawRectangle(60, 60, 451, 200);
-        do Screen.setColor(false);
-        do Screen.drawRectangle(65, 65, 446, 195);
-        do Screen.setColor(true);
-        do Screen.drawRectangle(70, 70, 441, 190);
-        do Screen.setColor(false);
-        do Screen.drawRectangle(73, 73, 438, 187);
-        // Corona gigante centrada (sprite ASCII pixel-art via rectangulos)
-        do dibujarCoronaGrande(220, 90);
-        do Output.moveCursor(10, 25);
-        do Output.printString(txtVictoria);
-        do Output.moveCursor(12, 22);
-        do Output.printString(txtPuntajeFinal); do Output.printInt(puntaje);
-        do Output.moveCursor(15, 15);
-        do Output.printString(txtPromptMenu);
+        do pantallaFinal.mostrarVictoria(puntaje);
         do esperarTecla();
         let estado = 0;
         return;
     }
 
     method void mostrarDerrota() {
-        do Screen.clearScreen();
-        // Marco lapida: bloque solido grueso
-        do Screen.setColor(true);
-        do Screen.drawRectangle(60, 60, 451, 200);
-        do Screen.setColor(false);
-        do Screen.drawRectangle(80, 80, 431, 180);
-        // Sprite gigante del enemigo centinela (te atrapo)
-        do dibujarEnemigoGrande(220, 95);
-        do Output.moveCursor(10, 25);
-        do Output.printString(txtDerrota);
-        do Output.moveCursor(12, 22);
-        do Output.printString(txtPuntajeFinal); do Output.printInt(puntaje);
-        do Output.moveCursor(15, 15);
-        do Output.printString(txtPromptMenu);
+        do pantallaFinal.mostrarDerrota(puntaje);
         do esperarTecla();
         let estado = 0;
         return;
     }
 
-    /** Corona pixel-art 60x30 px (pantalla de victoria). */
-    method void dibujarCoronaGrande(int x, int y) {
-        do Screen.setColor(true);
-        // Base
-        do Screen.drawRectangle(x, y + 20, x + 60, y + 28);
-        // Tres picos triangulares
-        do Screen.drawRectangle(x + 4, y + 12, x + 14, y + 20);
-        do Screen.drawRectangle(x + 25, y + 8, x + 35, y + 20);
-        do Screen.drawRectangle(x + 46, y + 12, x + 56, y + 20);
-        // Joyas (cuadritos blancos sobre cada pico)
-        do Screen.setColor(false);
-        do Screen.drawRectangle(x + 7, y + 14, x + 11, y + 18);
-        do Screen.drawRectangle(x + 28, y + 10, x + 32, y + 14);
-        do Screen.drawRectangle(x + 49, y + 14, x + 53, y + 18);
-        return;
-    }
-
-    /** Sprite gigante del enemigo (50x60 px) para la pantalla de derrota. */
-    method void dibujarEnemigoGrande(int x, int y) {
-        // Domo + cuerpo
-        do Screen.setColor(true);
-        do Screen.drawRectangle(x, y + 15, x + 50, y + 60);
-        do Screen.drawCircle(x + 25, y + 15, 25);
-        // Ondas inferiores (recortes blancos)
-        do Screen.setColor(false);
-        do Screen.drawRectangle(x, y + 55, x + 8, y + 60);
-        do Screen.drawRectangle(x + 12, y + 55, x + 19, y + 60);
-        do Screen.drawRectangle(x + 23, y + 55, x + 30, y + 60);
-        do Screen.drawRectangle(x + 34, y + 55, x + 41, y + 60);
-        do Screen.drawRectangle(x + 45, y + 55, x + 50, y + 60);
-        // Ojos grandes blancos
-        do Screen.drawRectangle(x + 8, y + 20, x + 20, y + 35);
-        do Screen.drawRectangle(x + 30, y + 20, x + 42, y + 35);
-        // Pupilas negras (rasgadas)
-        do Screen.setColor(true);
-        do Screen.drawRectangle(x + 12, y + 22, x + 16, y + 32);
-        do Screen.drawRectangle(x + 34, y + 22, x + 38, y + 32);
+    method void mostrarDespedida() {
+        do Screen.clearScreen();
+        do Output.moveCursor(10, 25);
+        do Output.printString(txtGracias);
+        do Output.moveCursor(12, 9);
+        do Output.printString(txtVolver);
+        do esperarTecla();
         return;
     }
 
@@ -370,22 +240,16 @@ class Juego {
     }
 
     method void eliminar() {
-        if (~(laberinto = null)) { do laberinto.eliminar(); }
-        if (~(jugador = null)) { do jugador.eliminar(); }
-        if (~(enemigo = null)) { do enemigo.eliminar(); }
-        if (~(enemigo2 = null)) { do enemigo2.eliminar(); }
+        do laberinto.eliminar();
+        do jugador.eliminar();
+        do enemigo.eliminar();
+        do enemigo2.eliminar();
         do gestorNiveles.eliminar();
         do menu.eliminar();
-        do pnlClear.dispose();
-        do pnlVidas.dispose();
-        do pnlNivel.dispose();
-        do pnlPuntos.dispose();
+        do hud.eliminar();
+        do pantallaFinal.eliminar();
         do txtGracias.dispose();
-        do txtPrompt.dispose();
-        do txtVictoria.dispose();
-        do txtDerrota.dispose();
-        do txtPuntajeFinal.dispose();
-        do txtPromptMenu.dispose();
+        do txtVolver.dispose();
         do Memory.deAlloc(this);
         return;
     }

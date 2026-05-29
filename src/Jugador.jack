@@ -1,7 +1,4 @@
-/** Controla al heroe del juego.
- *  Disenado para reuso: la instancia se pre-aloca una vez en Juego y se
- *  reposiciona via fijar() en cada nivel / muerte.
- */
+// Posicion del heroe y movimiento validado contra el laberinto.
 class Jugador {
     field int fila, col;
 
@@ -31,34 +28,17 @@ class Jugador {
 
     method boolean estaEn(int f, int c) { return (fila = f) & (col = c); }
 
-    /** Sprite del jugador (12x12 dentro de celda 16x16):
-     *  Cabeza pixel-art con cresta superior, dos ojos y sonrisa.
-     *  Identidad: arqueologo-digital agil y curioso.
-     *
-     *      . X X X X X X X X X X .
-     *      . X . . . . . . . . X .   <- contorno cabeza
-     *      . X . # . . . . # . X .   <- ojos
-     *      . X . # . . . . # . X .
-     *      . X . . . . . . . . X .
-     *      . X . . # # # # . . X .   <- sonrisa
-     *      . X . . . . . . . . X .
-     *      . X X X X X X X X X X .
-     */
     method void dibujar(Laberinto lab) {
         var int x, y;
         let x = lab.celdaX(col);
         let y = lab.celdaY(fila);
         do Screen.setColor(true);
-        // Contorno de la cabeza (cuadrado lleno 12x12)
         do Screen.drawRectangle(x + 2, y + 2, x + 13, y + 13);
-        // Interior blanco (la "cara")
         do Screen.setColor(false);
         do Screen.drawRectangle(x + 4, y + 4, x + 11, y + 11);
-        // Ojos
         do Screen.setColor(true);
         do Screen.drawRectangle(x + 5, y + 5, x + 6, y + 7);
         do Screen.drawRectangle(x + 9, y + 5, x + 10, y + 7);
-        // Sonrisa
         do Screen.drawLine(x + 6, y + 10, x + 9, y + 10);
         do Screen.drawPixel(x + 5, y + 9);
         do Screen.drawPixel(x + 10, y + 9);

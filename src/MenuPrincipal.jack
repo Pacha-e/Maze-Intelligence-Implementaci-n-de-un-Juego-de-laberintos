@@ -1,4 +1,4 @@
-/** Interfaz de usuario para la pantalla de inicio. */
+// Pantalla inicial: titulo, opciones de modo y navegacion por teclado.
 class MenuPrincipal {
     field int seleccion;
     field String txtTitulo, txtMision, txtSalir;
@@ -22,69 +22,61 @@ class MenuPrincipal {
         return this;
     }
 
-    /** Muestra el menu y gestiona la navegacion. */
     method int mostrar() {
-        var int tecla;
+        var int tecla, anterior;
         var boolean listo;
-        var int viejaSeleccion;
         let listo = false;
-        
         do dibujarEstatico();
         do dibujarOpciones();
-
         while (~listo) {
             let tecla = Keyboard.keyPressed();
-            let viejaSeleccion = seleccion;
-
-            // Navegacion con flechas
-            if (tecla = 131) { // Flecha Arriba
-                if (seleccion > 1) { 
-                    let seleccion = seleccion - 1; 
-                }
+            let anterior = seleccion;
+            if (tecla = 131) {
+                if (seleccion > 1) { let seleccion = seleccion - 1; }
             }
-            if (tecla = 133) { // Flecha Abajo
-                if (seleccion < 3) { 
-                    let seleccion = seleccion + 1; 
-                }
+            if (tecla = 133) {
+                if (seleccion < 3) { let seleccion = seleccion + 1; }
             }
-
-            // Si cambio la seleccion, redibujar solo las opciones
-            if (~(viejaSeleccion = seleccion)) {
+            if (~(anterior = seleccion)) {
                 do dibujarOpciones();
                 do esperarLiberacion();
             }
-
-            // Confirmar seleccion (Enter)
-            if (tecla = 128) { 
+            if (tecla = 128) {
                 let listo = true;
                 do esperarLiberacion();
             }
-
-            // Seleccion directa (1, 2, 3)
-            if ((tecla > 48) & (tecla < 52)) { 
+            if ((tecla > 48) & (tecla < 52)) {
                 let seleccion = tecla - 48;
                 let listo = true;
                 do esperarLiberacion();
             }
-
-            // Salir (Q)
-            if ((tecla = 81) | (tecla = 113)) { 
+            if ((tecla = 81) | (tecla = 113)) {
                 let seleccion = 0;
                 let listo = true;
                 do esperarLiberacion();
             }
-
-            do Sys.wait(10); // Estabilidad para la VM
+            do Sys.wait(10);
         }
         return seleccion;
     }
 
-    /** Dibuja el marco, titulo y cajas fijas con precision visual. */
     method void dibujarEstatico() {
         do Screen.clearScreen();
+        do dibujarMarcoExterior();
+        do dibujarCajaTitulo();
+        do Output.moveCursor(6, 23);
+        do Output.printString(txtTitulo);
+        do Output.moveCursor(11, 11);
+        do Output.printString(txtMision);
+        do dibujarCajaSalida();
+        do Output.moveCursor(20, 21);
+        do Output.printString(txtSalir);
+        do dibujarSpritesEsquinas();
+        return;
+    }
+
+    method void dibujarMarcoExterior() {
         do Screen.setColor(true);
-        
-        // 1. Marco exterior triple (Estructura principal)
         do Screen.drawRectangle(5, 5, 506, 250);
         do Screen.setColor(false);
         do Screen.drawRectangle(10, 10, 501, 245);
@@ -92,47 +84,37 @@ class MenuPrincipal {
         do Screen.drawRectangle(15, 15, 496, 240);
         do Screen.setColor(false);
         do Screen.drawRectangle(17, 17, 494, 238);
+        return;
+    }
 
-        // 2. Caja del Titulo con borde grueso
+    method void dibujarCajaTitulo() {
         do Screen.setColor(true);
-        do Screen.drawRectangle(140, 35, 372, 105); // Borde exterior negro
+        do Screen.drawRectangle(140, 35, 372, 105);
         do Screen.setColor(false);
-        do Screen.drawRectangle(143, 38, 369, 102); // Espacio blanco
+        do Screen.drawRectangle(143, 38, 369, 102);
         do Screen.setColor(true);
-        do Screen.drawRectangle(146, 41, 366, 99);  // Segundo borde negro (Grosor)
+        do Screen.drawRectangle(146, 41, 366, 99);
         do Screen.setColor(false);
-        do Screen.drawRectangle(151, 46, 361, 94);  // Area blanca final
-        
-        // Titulo MAZE INTELLIGENCE (Fila 6, 17 chars centrados en caja)
-        do Output.moveCursor(6, 23);
-        do Output.printString(txtTitulo);
+        do Screen.drawRectangle(151, 46, 361, 94);
+        return;
+    }
 
-        // 3. Instruccion de mision (Fila 11, 41 chars centrados)
-        do Output.moveCursor(11, 11);
-        do Output.printString(txtMision);
-
-        // 4. Caja inferior para la salida (Borde uniforme de 3 pixeles)
+    method void dibujarCajaSalida() {
         do Screen.setColor(true);
-        do Screen.drawRectangle(130, 210, 382, 238); // Rectangulo negro exterior
+        do Screen.drawRectangle(130, 210, 382, 238);
         do Screen.setColor(false);
-        do Screen.drawRectangle(133, 213, 379, 235); // Rectangulo blanco interior (Grosor uniforme)
-        
-        // Texto de salida (Fila 20)
-        do Output.moveCursor(20, 21);
-        do Output.printString(txtSalir);
+        do Screen.drawRectangle(133, 213, 379, 235);
+        return;
+    }
 
-        // Sprites decorativos en las cuatro esquinas: dos jugadores y
-        // dos enemigos, intercalados, anuncian la mecanica del juego de
-        // un vistazo. Identidad del tema "Cripta del Centinela".
+    method void dibujarSpritesEsquinas() {
         do dibujarJugadorMini(28, 25);
         do dibujarEnemigoMini(472, 25);
         do dibujarEnemigoMini(28, 215);
         do dibujarJugadorMini(472, 215);
-
         return;
     }
 
-    /** Mini-jugador 12x12 para decoracion (sin animacion). */
     method void dibujarJugadorMini(int x, int y) {
         do Screen.setColor(true);
         do Screen.drawRectangle(x, y, x + 11, y + 11);
@@ -145,23 +127,19 @@ class MenuPrincipal {
         return;
     }
 
-    /** Mini-enemigo 12x12 para decoracion. */
     method void dibujarEnemigoMini(int x, int y) {
         do Screen.setColor(true);
         do Screen.drawRectangle(x, y + 2, x + 11, y + 10);
         do Screen.drawCircle(x + 5, y + 3, 4);
-        // Ojos blancos
         do Screen.setColor(false);
         do Screen.drawRectangle(x + 2, y + 4, x + 4, y + 6);
         do Screen.drawRectangle(x + 7, y + 4, x + 9, y + 6);
-        // Ondas inferiores
         do Screen.drawRectangle(x, y + 10, x + 2, y + 11);
         do Screen.drawRectangle(x + 4, y + 10, x + 6, y + 11);
         do Screen.drawRectangle(x + 8, y + 10, x + 11, y + 11);
         return;
     }
 
-    /** Dibuja la lista de opciones. */
     method void dibujarOpciones() {
         do imprimirOpcion(14, 16, 1);
         do imprimirOpcion(16, 16, 2);
@@ -169,23 +147,18 @@ class MenuPrincipal {
         return;
     }
 
-    /** Imprime una opcion con corchetes y resaltado dinamico. */
     method void imprimirOpcion(int f, int c, int num) {
         do Output.moveCursor(f, c);
-
         if (seleccion = num) {
             do Output.printString(txtSelPrefijo);
         } else {
             do Output.printString(txtNoSelPrefijo);
         }
-
         do Output.printInt(num);
         do Output.printString(txtBracketCierre);
-
         if (num = 1) { do Output.printString(txtModoEnt); }
         if (num = 2) { do Output.printString(txtModoNor); }
         if (num = 3) { do Output.printString(txtModoExp); }
-
         if (seleccion = num) {
             do Output.printString(txtSelSufijo);
         } else {
@@ -194,15 +167,11 @@ class MenuPrincipal {
         return;
     }
 
-    /** Evita la repeticion de lectura al mantener presionada una tecla. */
     method void esperarLiberacion() {
-        while (~(Keyboard.keyPressed() = 0)) {
-            do Sys.wait(5);
-        }
+        while (~(Keyboard.keyPressed() = 0)) { do Sys.wait(5); }
         return;
     }
 
-    /** Libera los recursos del menu. */
     method void eliminar() {
         do txtTitulo.dispose();
         do txtMision.dispose();

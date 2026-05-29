@@ -1,4 +1,4 @@
-/** Punto de entrada principal del juego. */
+// Punto de entrada del juego.
 class Main {
     function void main() {
         var Juego juego;

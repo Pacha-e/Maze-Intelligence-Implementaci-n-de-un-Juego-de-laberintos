@@ -1,11 +1,5 @@
-/** Generador de mapas con 9 layouts unicos (3 modos x 3 niveles).
- *  Diseno inspirado en Pacman: loops, choke-points progresivos, cookies
- *  distribuidas para forzar exploracion, spawn jugador/enemigo en
- *  esquinas opuestas. Dificultad creciente por modo y por nivel dentro
- *  de cada modo.
- *
- *  Pantalla maxima: 13 filas x 31 columnas.
- */
+// Genera los 9 mapas del juego (3 modos x 3 niveles).
+// Cada metodo mapaXY define muros, posiciones iniciales y galletas.
 class GestorNiveles {
     constructor GestorNiveles new() { return this; }
 
@@ -16,71 +10,12 @@ class GestorNiveles {
         return;
     }
 
-    // ============================================================
-    // MODO ENTRENAMIENTO: mapas abiertos, pocos muros, muchos espacios
-    // ============================================================
-
     method void construirEntrenamiento(Laberinto lab, int nivel) {
         if (nivel = 1) { do mapaE1(lab); }
         if (nivel = 2) { do mapaE2(lab); }
         if (nivel = 3) { do mapaE3(lab); }
         return;
     }
-
-    /** E1 "Campo Base" 11x27: Cuatro pilares en las esquinas. Muy facil. */
-    method void mapaE1(Laberinto lab) {
-        do lab.reiniciar(11, 27);
-        do lab.construirBorde();
-        // Pilares 2x2
-        do lab.setMuro(2, 5); do lab.setMuro(2, 6); do lab.setMuro(3, 5); do lab.setMuro(3, 6);
-        do lab.setMuro(2, 20); do lab.setMuro(2, 21); do lab.setMuro(3, 20); do lab.setMuro(3, 21);
-        do lab.setMuro(7, 5); do lab.setMuro(7, 6); do lab.setMuro(8, 5); do lab.setMuro(8, 6);
-        do lab.setMuro(7, 20); do lab.setMuro(7, 21); do lab.setMuro(8, 20); do lab.setMuro(8, 21);
-        
-        do lab.setInicio(1, 1);
-        do lab.setEnemigoInicio(9, 25);
-        do lab.setObjetivo(1, 25);
-        do lab.setObjetivo(9, 1);
-        do lab.setObjetivo(5, 13);
-        return;
-    }
-
-    /** E2 "Gran Salto" 11x27: Una barrera central con dos pasos laterales. */
-    method void mapaE2(Laberinto lab) {
-        do lab.reiniciar(11, 27);
-        do lab.construirBorde();
-        do lab.colMuro(13, 1, 4, -1);
-        do lab.colMuro(13, 6, 9, -1);
-        
-        do lab.setInicio(1, 1);
-        do lab.setEnemigoInicio(9, 25);
-        do lab.setObjetivo(1, 25);
-        do lab.setObjetivo(9, 1);
-        do lab.setObjetivo(1, 12); // Movido: estaba en muro (1,13)
-        do lab.setObjetivo(9, 14); // Movido: estaba en muro (9,13)
-        return;
-    }
-
-    /** E3 "Tridente" 13x29: Tres secciones conectadas por un pasillo central. */
-    method void mapaE3(Laberinto lab) {
-        do lab.reiniciar(13, 29);
-        do lab.construirBorde();
-        do lab.filaMuro(4, 4, 24, 14);
-        do lab.filaMuro(8, 4, 24, 14);
-        
-        do lab.setInicio(1, 1);
-        do lab.setEnemigoInicio(11, 27);
-        do lab.setEnemigo2Inicio(1, 27); // Segundo enemigo
-        do lab.setObjetivo(1, 27);
-        do lab.setObjetivo(11, 1);
-        do lab.setObjetivo(6, 4);
-        do lab.setObjetivo(6, 24);
-        return;
-    }
-
-    // ============================================================
-    // MODO NORMAL: bucles, pasillos y mayor densidad
-    // ============================================================
 
     method void construirNormal(Laberinto lab, int nivel) {
         if (nivel = 1) { do mapaN1(lab); }
@@ -89,7 +24,57 @@ class GestorNiveles {
         return;
     }
 
-    /** N1 "El Anillo" 13x29: Un gran bucle central. */
+    method void construirExperto(Laberinto lab, int nivel) {
+        if (nivel = 1) { do mapaX1(lab); }
+        if (nivel = 2) { do mapaX2(lab); }
+        if (nivel = 3) { do mapaX3(lab); }
+        return;
+    }
+
+    method void mapaE1(Laberinto lab) {
+        do lab.reiniciar(11, 27);
+        do lab.construirBorde();
+        do lab.setMuro(2, 5); do lab.setMuro(2, 6); do lab.setMuro(3, 5); do lab.setMuro(3, 6);
+        do lab.setMuro(2, 20); do lab.setMuro(2, 21); do lab.setMuro(3, 20); do lab.setMuro(3, 21);
+        do lab.setMuro(7, 5); do lab.setMuro(7, 6); do lab.setMuro(8, 5); do lab.setMuro(8, 6);
+        do lab.setMuro(7, 20); do lab.setMuro(7, 21); do lab.setMuro(8, 20); do lab.setMuro(8, 21);
+        do lab.setInicio(1, 1);
+        do lab.setEnemigoInicio(9, 25);
+        do lab.setObjetivo(1, 25);
+        do lab.setObjetivo(9, 1);
+        do lab.setObjetivo(5, 13);
+        return;
+    }
+
+    method void mapaE2(Laberinto lab) {
+        do lab.reiniciar(11, 27);
+        do lab.construirBorde();
+        do lab.colMuro(13, 1, 4, -1);
+        do lab.colMuro(13, 6, 9, -1);
+        do lab.setInicio(1, 1);
+        do lab.setEnemigoInicio(9, 25);
+        do lab.setObjetivo(1, 25);
+        do lab.setObjetivo(9, 1);
+        do lab.setObjetivo(1, 12);
+        do lab.setObjetivo(9, 14);
+        return;
+    }
+
+    method void mapaE3(Laberinto lab) {
+        do lab.reiniciar(13, 29);
+        do lab.construirBorde();
+        do lab.filaMuro(4, 4, 24, 14);
+        do lab.filaMuro(8, 4, 24, 14);
+        do lab.setInicio(1, 1);
+        do lab.setEnemigoInicio(11, 27);
+        do lab.setEnemigo2Inicio(1, 27);
+        do lab.setObjetivo(1, 27);
+        do lab.setObjetivo(11, 1);
+        do lab.setObjetivo(6, 4);
+        do lab.setObjetivo(6, 24);
+        return;
+    }
+
     method void mapaN1(Laberinto lab) {
         do lab.reiniciar(13, 29);
         do lab.construirBorde();
@@ -97,10 +82,9 @@ class GestorNiveles {
         do lab.filaMuro(9, 5, 23, -1);
         do lab.colMuro(5, 3, 9, 6);
         do lab.colMuro(23, 3, 9, 6);
-        
         do lab.setInicio(1, 1);
         do lab.setEnemigoInicio(11, 27);
-        do lab.setEnemigo2Inicio(1, 27); // Segundo enemigo
+        do lab.setEnemigo2Inicio(1, 27);
         do lab.setObjetivo(1, 27);
         do lab.setObjetivo(11, 1);
         do lab.setObjetivo(6, 5);
@@ -109,19 +93,16 @@ class GestorNiveles {
         return;
     }
 
-    /** N2 "Cuatro Esquinas" 13x29: Layout simetrico con bloques internos. */
     method void mapaN2(Laberinto lab) {
         do lab.reiniciar(13, 29);
         do lab.construirBorde();
-        // Bloques tipo "L"
         do lab.colMuro(7, 2, 5, -1); do lab.filaMuro(5, 2, 7, -1);
         do lab.colMuro(21, 2, 5, -1); do lab.filaMuro(5, 21, 26, -1);
         do lab.colMuro(7, 7, 10, -1); do lab.filaMuro(7, 2, 7, -1);
         do lab.colMuro(21, 7, 10, -1); do lab.filaMuro(7, 21, 26, -1);
-        
         do lab.setInicio(1, 1);
         do lab.setEnemigoInicio(11, 27);
-        do lab.setEnemigo2Inicio(1, 27); // Segundo enemigo
+        do lab.setEnemigo2Inicio(1, 27);
         do lab.setObjetivo(1, 27);
         do lab.setObjetivo(11, 1);
         do lab.setObjetivo(6, 14);
@@ -130,61 +111,42 @@ class GestorNiveles {
         return;
     }
 
-    /** N3 "Tributo Pacman" 13x31: Clasicos pasillos y bloques rectangulares. */
     method void mapaN3(Laberinto lab) {
         do lab.reiniciar(13, 31);
         do lab.construirBorde();
-        // Bloques superiores e inferiores (Filas 2-3 y 9-10)
         do lab.filaMuro(2, 4, 12, -1); do lab.filaMuro(3, 4, 12, -1);
         do lab.filaMuro(2, 18, 26, -1); do lab.filaMuro(3, 18, 26, -1);
         do lab.filaMuro(9, 4, 12, -1); do lab.filaMuro(10, 4, 12, -1);
         do lab.filaMuro(9, 18, 26, -1); do lab.filaMuro(10, 18, 26, -1);
-        // Barra central (Col 15)
         do lab.colMuro(15, 2, 5, -1);
         do lab.colMuro(15, 7, 10, -1);
-        
         do lab.setInicio(1, 1);
         do lab.setEnemigoInicio(11, 29);
-        do lab.setEnemigo2Inicio(1, 29); // Segundo enemigo
+        do lab.setEnemigo2Inicio(1, 29);
         do lab.setObjetivo(1, 29);
         do lab.setObjetivo(11, 1);
         do lab.setObjetivo(6, 1);
         do lab.setObjetivo(6, 29);
-        do lab.setObjetivo(6, 14); // Movido: de 15 (muro) a 14
-        do lab.setObjetivo(5, 14); // Movido: de (4,15) muro a (5,14)
-        do lab.setObjetivo(7, 14); // Movido: de (8,15) muro a (7,14)
+        do lab.setObjetivo(6, 14);
+        do lab.setObjetivo(5, 14);
+        do lab.setObjetivo(7, 14);
         return;
     }
 
-    // ============================================================
-    // MODO EXPERTO: choke-points, densidad y trampas
-    // ============================================================
-
-    method void construirExperto(Laberinto lab, int nivel) {
-        if (nivel = 1) { do mapaX1(lab); }
-        if (nivel = 2) { do mapaX2(lab); }
-        if (nivel = 3) { do mapaX3(lab); }
-        return;
-    }
-
-    /** X1 "Doble Tunel" 13x29: Pasillos muy estrechos y largos. */
     method void mapaX1(Laberinto lab) {
         do lab.reiniciar(13, 29);
         do lab.construirBorde();
-        // Filas barrera con un hueco
         do lab.filaMuro(2, 2, 26, 14);
         do lab.filaMuro(10, 2, 26, 14);
-        // Filas barrera con dos huecos (7 y 21): muro continuo + abrir huecos
         do lab.filaMuro(4, 2, 26, -1);
         do lab.reiniciarCelda(4, 7);
         do lab.reiniciarCelda(4, 21);
         do lab.filaMuro(8, 2, 26, -1);
         do lab.reiniciarCelda(8, 7);
         do lab.reiniciarCelda(8, 21);
-        
         do lab.setInicio(1, 1);
         do lab.setEnemigoInicio(11, 27);
-        do lab.setEnemigo2Inicio(1, 27); // Segundo enemigo
+        do lab.setEnemigo2Inicio(1, 27);
         do lab.setObjetivo(1, 27);
         do lab.setObjetivo(11, 1);
         do lab.setObjetivo(6, 14);
@@ -194,12 +156,9 @@ class GestorNiveles {
         return;
     }
 
-    /** X2 "La Prision" 13x31: Multiples celdas interconectadas. */
     method void mapaX2(Laberinto lab) {
         do lab.reiniciar(13, 31);
         do lab.construirBorde();
-        
-        // Estructura de "Peine": muros verticales que no tocan el centro
         do lab.colMuro(6, 1, 4, -1);
         do lab.colMuro(6, 8, 11, -1);
         do lab.colMuro(12, 1, 4, -1);
@@ -208,18 +167,14 @@ class GestorNiveles {
         do lab.colMuro(18, 8, 11, -1);
         do lab.colMuro(24, 1, 4, -1);
         do lab.colMuro(24, 8, 11, -1);
-        
-        // Muro central horizontal con multiples escapes
         do lab.filaMuro(6, 1, 29, 3);
         do lab.reiniciarCelda(6, 9);
         do lab.reiniciarCelda(6, 15);
         do lab.reiniciarCelda(6, 21);
         do lab.reiniciarCelda(6, 27);
-        
         do lab.setInicio(1, 1);
         do lab.setEnemigoInicio(11, 29);
-        do lab.setEnemigo2Inicio(1, 29); // Segundo enemigo
-        
+        do lab.setEnemigo2Inicio(1, 29);
         do lab.setObjetivo(1, 29);
         do lab.setObjetivo(11, 1);
         do lab.setObjetivo(1, 15);
@@ -230,11 +185,9 @@ class GestorNiveles {
         return;
     }
 
-    /** X3 "El Laberinto Maestro" 13x31: Complejidad maxima. */
     method void mapaX3(Laberinto lab) {
         do lab.reiniciar(13, 31);
         do lab.construirBorde();
-        // Bloques alternados para crear un zig-zag forzado
         do lab.colMuro(4, 1, 10, 5);
         do lab.colMuro(8, 2, 11, 6);
         do lab.colMuro(12, 1, 10, 5);
@@ -242,18 +195,17 @@ class GestorNiveles {
         do lab.colMuro(20, 1, 10, 5);
         do lab.colMuro(24, 2, 11, 6);
         do lab.colMuro(28, 1, 10, 5);
-        
         do lab.setInicio(1, 1);
         do lab.setEnemigoInicio(11, 29);
-        do lab.setEnemigo2Inicio(1, 29); // Segundo enemigo
+        do lab.setEnemigo2Inicio(1, 29);
         do lab.setObjetivo(1, 29);
         do lab.setObjetivo(11, 1);
-        do lab.setObjetivo(1, 15); // Movido: 16 es muro
-        do lab.setObjetivo(11, 15); // Movido: 16 es muro
-        do lab.setObjetivo(6, 3); // Movido: 4 es muro
-        do lab.setObjetivo(6, 11); // Movido: 12 es muro
-        do lab.setObjetivo(6, 19); // Movido: 20 es muro
-        do lab.setObjetivo(6, 27); // Movido: 28 es muro
+        do lab.setObjetivo(1, 15);
+        do lab.setObjetivo(11, 15);
+        do lab.setObjetivo(6, 3);
+        do lab.setObjetivo(6, 11);
+        do lab.setObjetivo(6, 19);
+        do lab.setObjetivo(6, 27);
         return;
     }
 

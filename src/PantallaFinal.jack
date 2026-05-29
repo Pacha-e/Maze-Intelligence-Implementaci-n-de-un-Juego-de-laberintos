@@ -1,0 +1,102 @@
+// Pantallas de victoria y derrota con sus marcos y sprites grandes.
+class PantallaFinal {
+    field String tituloVictoria;
+    field String tituloDerrota;
+    field String etiquetaPuntaje;
+    field String pieMenu;
+
+    constructor PantallaFinal new() {
+        let tituloVictoria = "!HAS ESCAPADO!";
+        let tituloDerrota = "!CAPTURADO!";
+        let etiquetaPuntaje = "Puntaje Final: ";
+        let pieMenu = "Presiona cualquier tecla para el menu";
+        return this;
+    }
+
+    method void mostrarVictoria(int puntaje) {
+        do Screen.clearScreen();
+        do dibujarMarcoVictoria();
+        do dibujarCorona(220, 90);
+        do escribirTextoFinal(tituloVictoria, puntaje);
+        return;
+    }
+
+    method void mostrarDerrota(int puntaje) {
+        do Screen.clearScreen();
+        do dibujarMarcoDerrota();
+        do dibujarEnemigoGrande(220, 95);
+        do escribirTextoFinal(tituloDerrota, puntaje);
+        return;
+    }
+
+    method void dibujarMarcoVictoria() {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(60, 60, 451, 200);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(65, 65, 446, 195);
+        do Screen.setColor(true);
+        do Screen.drawRectangle(70, 70, 441, 190);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(73, 73, 438, 187);
+        return;
+    }
+
+    method void dibujarMarcoDerrota() {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(60, 60, 451, 200);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(80, 80, 431, 180);
+        return;
+    }
+
+    method void escribirTextoFinal(String titulo, int puntaje) {
+        do Output.moveCursor(10, 25);
+        do Output.printString(titulo);
+        do Output.moveCursor(12, 22);
+        do Output.printString(etiquetaPuntaje);
+        do Output.printInt(puntaje);
+        do Output.moveCursor(15, 15);
+        do Output.printString(pieMenu);
+        return;
+    }
+
+    method void dibujarCorona(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y + 20, x + 60, y + 28);
+        do Screen.drawRectangle(x + 4, y + 12, x + 14, y + 20);
+        do Screen.drawRectangle(x + 25, y + 8, x + 35, y + 20);
+        do Screen.drawRectangle(x + 46, y + 12, x + 56, y + 20);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x + 7, y + 14, x + 11, y + 18);
+        do Screen.drawRectangle(x + 28, y + 10, x + 32, y + 14);
+        do Screen.drawRectangle(x + 49, y + 14, x + 53, y + 18);
+        return;
+    }
+
+    method void dibujarEnemigoGrande(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y + 15, x + 50, y + 60);
+        do Screen.drawCircle(x + 25, y + 15, 25);
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x, y + 55, x + 8, y + 60);
+        do Screen.drawRectangle(x + 12, y + 55, x + 19, y + 60);
+        do Screen.drawRectangle(x + 23, y + 55, x + 30, y + 60);
+        do Screen.drawRectangle(x + 34, y + 55, x + 41, y + 60);
+        do Screen.drawRectangle(x + 45, y + 55, x + 50, y + 60);
+        do Screen.drawRectangle(x + 8, y + 20, x + 20, y + 35);
+        do Screen.drawRectangle(x + 30, y + 20, x + 42, y + 35);
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x + 12, y + 22, x + 16, y + 32);
+        do Screen.drawRectangle(x + 34, y + 22, x + 38, y + 32);
+        return;
+    }
+
+    method void eliminar() {
+        do tituloVictoria.dispose();
+        do tituloDerrota.dispose();
+        do etiquetaPuntaje.dispose();
+        do pieMenu.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+}

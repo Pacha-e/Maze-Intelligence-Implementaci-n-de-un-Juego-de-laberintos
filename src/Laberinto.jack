@@ -1,9 +1,6 @@
-/** Estructura del laberinto y gestion de objetivos.
- *  Pre-alocado con dimensiones MAXIMAS (filasMax x colsMax) y un pool de
- *  Objetivos. reiniciar(f, c) cambia las dimensiones logicas y vacia el
- *  estado sin disparar Memory.alloc/deAlloc -- evita la fragmentacion del
- *  heap JackOS entre niveles y muertes.
- */
+// Matriz del laberinto y pool de objetivos.
+// Pre-alocado al maximo (filasMax x colsMax) y reutilizable entre niveles
+// via reiniciar(f, c) sin tocar el heap.
 class Laberinto {
     field Array celdas;
     field int filas, cols;
@@ -24,7 +21,6 @@ class Laberinto {
         let celdas = Array.new(maxF * maxC);
         let capacidadObjetivos = 30;
         let objetivos = Array.new(capacidadObjetivos);
-        // Pool de Objetivos pre-alocado: nunca se desaloca por nivel.
         let i = 0;
         while (i < capacidadObjetivos) {
             let objetivos[i] = Objetivo.new(0, 0);
@@ -35,7 +31,6 @@ class Laberinto {
         return this;
     }
 
-    /** Reinicia el laberinto con nuevas dimensiones logicas, sin alocar. */
     method void reiniciar(int f, int c) {
         let filas = f;
         let cols = c;
@@ -103,17 +98,11 @@ class Laberinto {
         return;
     }
 
-    /** Borra un muro en la posicion especificada. */
     method void reiniciarCelda(int f, int c) {
         let celdas[(f * colsMax) + c] = 0;
         return;
     }
 
-    /** Reposiciona un Objetivo del pool sin alocar.
-     *  Guarda defensiva: descarta silenciosamente posiciones invalidas
-     *  (muro o fuera del grid) para que un mapa mal definido nunca
-     *  produzca una galleta inalcanzable que congele el nivel.
-     */
     method void setObjetivo(int f, int c) {
         var Objetivo obj;
         if (~puedeEntrar(f, c)) { return; }
@@ -125,7 +114,7 @@ class Laberinto {
         return;
     }
 
-    /** Elimina un objetivo logicamente: swap-with-last preserva el pool. */
+    // Elimina el objetivo en (f, c) sin dejar huecos en el pool.
     method void removerObjetivo(int f, int c) {
         var int i;
         var Objetivo obj, tmp;
@@ -149,51 +138,66 @@ class Laberinto {
         return ~(celdas[(f * colsMax) + c] = 1);
     }
 
-    /** Renderiza el laberinto, los muros y los objetivos.
-     *  - Muros: bloque solido 14x14 con una cruz interna blanca que evoca
-     *    un circuito impreso (tema "cripta digital"). La cruz da textura
-     *    sin sacrificar legibilidad: el muro sigue leyendose como muro.
-     *  - Galletas (cristales): rombo de 4 puntas con centro lleno.
-     *    Mucho mas legible y "valioso" que el cuadradito plano original.
-     */
     method void dibujar() {
-        var int f, c, x, y, i;
-        var Objetivo obj;
-        let f = 0; let y = 42;
+        do dibujarMuros();
+        do dibujarObjetivos();
+        return;
+    }
+
+    method void dibujarMuros() {
+        var int f, c, x, y;
+        let f = 0;
+        let y = 42;
         while (f < filas) {
-            let c = 0; let x = 10;
+            let c = 0;
+            let x = 10;
             while (c < cols) {
                 if (celdas[(f * colsMax) + c] = 1) {
-                    // Bloque base
-                    do Screen.setColor(true);
-                    do Screen.drawRectangle(x, y, x + 13, y + 13);
-                    // Cruz interna blanca (textura tipo circuito)
-                    do Screen.setColor(false);
-                    do Screen.drawLine(x + 6, y + 2, x + 6, y + 11);
-                    do Screen.drawLine(x + 2, y + 6, x + 11, y + 6);
+                    do dibujarMuro(x, y);
                 }
-                let c = c + 1; let x = x + 16;
+                let c = c + 1;
+                let x = x + 16;
             }
-            let f = f + 1; let y = y + 16;
+            let f = f + 1;
+            let y = y + 16;
         }
+        return;
+    }
+
+    method void dibujarMuro(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y, x + 13, y + 13);
+        do Screen.setColor(false);
+        do Screen.drawLine(x + 6, y + 2, x + 6, y + 11);
+        do Screen.drawLine(x + 2, y + 6, x + 11, y + 6);
+        return;
+    }
+
+    method void dibujarObjetivos() {
+        var int i, x, y;
+        var Objetivo obj;
         let i = 0;
         while (i < conteoObjetivos) {
             let obj = objetivos[i];
             let x = celdaX(obj.getCol());
             let y = celdaY(obj.getFila());
-            // Cristal romboide: 4 puntas + centro
-            do Screen.setColor(true);
-            do Screen.drawPixel(x + 6, y + 3);   // punta arriba
-            do Screen.drawPixel(x + 6, y + 9);   // punta abajo
-            do Screen.drawPixel(x + 3, y + 6);   // punta izquierda
-            do Screen.drawPixel(x + 9, y + 6);   // punta derecha
-            do Screen.drawLine(x + 5, y + 4, x + 7, y + 4);
-            do Screen.drawLine(x + 4, y + 5, x + 8, y + 5);
-            do Screen.drawLine(x + 4, y + 6, x + 8, y + 6);
-            do Screen.drawLine(x + 4, y + 7, x + 8, y + 7);
-            do Screen.drawLine(x + 5, y + 8, x + 7, y + 8);
+            do dibujarCristal(x, y);
             let i = i + 1;
         }
+        return;
+    }
+
+    method void dibujarCristal(int x, int y) {
+        do Screen.setColor(true);
+        do Screen.drawPixel(x + 6, y + 3);
+        do Screen.drawPixel(x + 6, y + 9);
+        do Screen.drawPixel(x + 3, y + 6);
+        do Screen.drawPixel(x + 9, y + 6);
+        do Screen.drawLine(x + 5, y + 4, x + 7, y + 4);
+        do Screen.drawLine(x + 4, y + 5, x + 8, y + 5);
+        do Screen.drawLine(x + 4, y + 6, x + 8, y + 6);
+        do Screen.drawLine(x + 4, y + 7, x + 8, y + 7);
+        do Screen.drawLine(x + 5, y + 8, x + 7, y + 8);
         return;
     }
 
@@ -205,28 +209,29 @@ class Laberinto {
     method int getColEnemigoInicio() { return colEnemigoInicio; }
     method int getFilaEnemigo2Inicio() { return filaEnemigo2Inicio; }
     method int getColEnemigo2Inicio() { return colEnemigo2Inicio; }
-    method int getConteoCeldas() { return filas * cols; }
     method int getConteoObjetivos() { return conteoObjetivos; }
     method int getFilaObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getFila(); }
     method int getColObjetivo(int i) { var Objetivo o; let o = objetivos[i]; return o.getCol(); }
     method int getIndice(int f, int c) { return (f * colsMax) + c; }
-    /** Setters de posiciones iniciales con guarda defensiva:
-     *  si la coordenada cae en muro o fuera del grid, se descarta para
-     *  evitar que el jugador o el enemigo arranquen en una celda ilegal.
-     */
+
     method void setInicio(int f, int c) {
         if (~puedeEntrar(f, c)) { return; }
-        let filaInicio = f; let colInicio = c;
+        let filaInicio = f;
+        let colInicio = c;
         return;
     }
+
     method void setEnemigoInicio(int f, int c) {
         if (~puedeEntrar(f, c)) { return; }
-        let filaEnemigoInicio = f; let colEnemigoInicio = c;
+        let filaEnemigoInicio = f;
+        let colEnemigoInicio = c;
         return;
     }
+
     method void setEnemigo2Inicio(int f, int c) {
         if (~puedeEntrar(f, c)) { return; }
-        let filaEnemigo2Inicio = f; let colEnemigo2Inicio = c;
+        let filaEnemigo2Inicio = f;
+        let colEnemigo2Inicio = c;
         return;
     }
 
@@ -236,7 +241,7 @@ class Laberinto {
         let i = 0;
         while (i < capacidadObjetivos) {
             let obj = objetivos[i];
-            if (~(obj = null)) { do obj.eliminar(); }
+            do obj.eliminar();
             let i = i + 1;
         }
         do Memory.deAlloc(objetivos);

@@ -1,7 +1,4 @@
-/** Representa un punto de puntaje en el laberinto.
- *  Disenado para reuso: las instancias se pre-alocan una sola vez en
- *  Laberinto y se reposicionan via fijar() en cada nivel.
- */
+// Galleta del laberinto: una posicion (fila, columna).
 class Objetivo {
     field int fila, col;
 
